@@ -1,6 +1,6 @@
 use aoc_lib::*;
 
-struct Input(usize, Vec<usize>);
+pub struct Input(usize, Vec<usize>);
 
 fn main() {
     let input = read_stdin();
@@ -16,7 +16,7 @@ fn main() {
     println!("Solving part 2 took: {:?}", solve_2_time);
 }
 
-fn parse_input(s: &str) -> Input {
+pub fn parse_input(s: &str) -> Input {
     Input(
         s.lines().next().unwrap().len(),
         s.lines()
@@ -25,7 +25,7 @@ fn parse_input(s: &str) -> Input {
     )
 }
 
-fn solve_1(input: &Input) -> usize {
+pub fn solve_1(input: &Input) -> usize {
     let mask = (1 << input.0) - 1;
     let half_len = input.1.len() / 2;
 
@@ -38,7 +38,7 @@ fn solve_1(input: &Input) -> usize {
     gamma * epsilon
 }
 
-fn solve_2(input: &Input) -> usize {
+pub fn solve_2(input: &Input) -> usize {
     let part1 = solve_2_sub(input, false);
     let part2 = solve_2_sub(input, true);
 
@@ -58,12 +58,10 @@ fn solve_2_sub(input: &Input, reverse: bool) -> usize {
                 .1
                 .iter()
                 .filter(|&&num| (num & pattern_bitmask) == pattern);
-            let one_count = get_one_count_at_location(iterator, i);
-            let total_count = input
-                .1
-                .iter()
-                .filter(|&&num| (num & pattern_bitmask) == pattern)
-                .count();
+
+            let (total_count, one_count) = iterator.fold((0, 0), |(total, ones), &n| {
+                (total + 1, if (n & (1 << i)) > 0 { ones + 1 } else { ones })
+            });
             if (!reverse && (one_count * 2) >= total_count)
                 || (reverse && (one_count * 2) < total_count)
             {
@@ -73,7 +71,10 @@ fn solve_2_sub(input: &Input, reverse: bool) -> usize {
             pattern_len += 1;
 
             // see if we find only a single match with this pattern
+            // NOTE: can probably use `1 << i` instead of tracking pattern_len
             pattern_bitmask = full_mask & !((1 << (input.0 - pattern_len)) - 1);
+
+            // NOTE: ideally, I would only iterate over `input` once per `i`,
             let mut iterator = input
                 .1
                 .iter()
@@ -87,7 +88,6 @@ fn solve_2_sub(input: &Input, reverse: bool) -> usize {
         .unwrap()
 }
 
-// TODO: generic over iterator?
 fn get_one_count_at_location<'a>(items: impl Iterator<Item = &'a usize>, i: usize) -> usize {
     items.filter(|&&n| (n & (1 << i)) > 0).count()
 }
