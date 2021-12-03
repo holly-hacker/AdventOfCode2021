@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "aoc-lib",
+    "day-1",
+    "day-2",
+    "day-3",
+]
