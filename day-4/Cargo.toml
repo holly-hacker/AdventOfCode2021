@@ -8,3 +8,10 @@ edition = "2021"
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
 itertools = "0.10.1"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "bench"
+harness = false

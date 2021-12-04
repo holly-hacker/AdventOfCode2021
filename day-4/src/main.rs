@@ -24,28 +24,22 @@ impl Board {
     }
 
     fn is_solved(mask: u32) -> bool {
-        // TODO: bitmasks instead
-        const INDICES: [[i32; 5]; 10] = [
+        const INDICES: [u32; 10] = [
             // horizontal
-            [0, 1, 2, 3, 4],
-            [5, 6, 7, 8, 9],
-            [10, 11, 12, 13, 14],
-            [15, 16, 17, 18, 19],
-            [20, 21, 22, 23, 24],
+            0b00000_00000_00000_00000_11111,
+            0b00000_00000_00000_11111_00000,
+            0b00000_00000_11111_00000_00000,
+            0b00000_11111_00000_00000_00000,
+            0b11111_00000_00000_00000_00000,
             // vertical
-            [0, 5, 10, 15, 20],
-            [1, 6, 11, 16, 21],
-            [2, 7, 12, 17, 22],
-            [3, 8, 13, 18, 23],
-            [4, 9, 14, 19, 24],
-            // diagonal
-            // [0, 6, 12, 18, 24],
-            // [4, 8, 12, 16, 20],
+            0b00001_00001_00001_00001_00001,
+            0b00010_00010_00010_00010_00010,
+            0b00100_00100_00100_00100_00100,
+            0b01000_01000_01000_01000_01000,
+            0b10000_10000_10000_10000_10000,
         ];
 
-        INDICES
-            .into_iter()
-            .any(|row| row.into_iter().all(|i| mask & (1 << i) != 0))
+        INDICES.into_iter().any(|row| row & mask == row)
     }
 }
 
@@ -63,7 +57,7 @@ fn main() {
     println!("Solving part 2 took: {:?}", solve_2_time);
 }
 
-fn parse_input(s: &str) -> Input {
+pub fn parse_input(s: &str) -> Input {
     let mut iter = s.lines().filter(|line| line.len() > 0);
 
     let x = iter
@@ -93,7 +87,7 @@ fn parse_input(s: &str) -> Input {
     Input(x, boards)
 }
 
-fn solve_1(input: &Input) -> usize {
+pub fn solve_1(input: &Input) -> usize {
     let mut solve_mask = vec![0u32; input.1.len()];
     let mut last_num = 0;
 
@@ -116,32 +110,49 @@ fn solve_1(input: &Input) -> usize {
     input.1[board_index].get_unmarked_sum(solve_mask[board_index]) * last_num
 }
 
-fn solve_2(input: &Input) -> usize {
+pub fn solve_2(input: &Input) -> usize {
     let mut solve_mask = vec![0u32; input.1.len()];
     let mut last_num = 0;
     let mut solved_list = vec![0usize; (input.1.len() / (usize::BITS as usize)) + 1];
     let mut last_solved = 0;
     let mut last_mask = 0;
+    let mut solved_count = 0; // i'm too lazy to write a check against solved_list
 
-    input.0.iter().for_each(|&num| {
-        input.1.iter().enumerate().for_each(|(i, board)| {
-            board.update_mask(num, solve_mask.index_mut(i));
+    input
+        .0
+        .iter()
+        .filter_map(|&num| {
+            input
+                .1
+                .iter()
+                .enumerate()
+                .filter_map(|(i, board)| {
+                    board.update_mask(num, solve_mask.index_mut(i));
 
-            let solved_ref = solved_list.index_mut(i / (usize::BITS as usize));
-            let solved_bit_idx = i % (usize::BITS as usize);
+                    let solved_ref = solved_list.index_mut(i / (usize::BITS as usize));
+                    let solved_bit_idx = i % (usize::BITS as usize);
 
-            if ((*solved_ref) & (1 << solved_bit_idx)) == 0 {
-                if Board::is_solved(solve_mask[i]) {
-                    last_num = num as usize;
-                    last_solved = i;
-                    last_mask = solve_mask[last_solved];
-                    *solved_ref |= 1 << solved_bit_idx;
+                    if ((*solved_ref) & (1 << solved_bit_idx)) == 0 {
+                        if Board::is_solved(solve_mask[i]) {
+                            last_num = num as usize;
+                            last_solved = i;
+                            last_mask = solve_mask[last_solved];
+                            *solved_ref |= 1 << solved_bit_idx;
+                            solved_count += 1;
 
-                    // TODO: early exit
-                }
-            }
-        });
-    });
+                            // check if everything is solved
+                            if solved_count == input.1.len() {
+                                return Some(());
+                            }
+                        }
+                    }
+
+                    None
+                })
+                .next()
+        })
+        .next()
+        .unwrap();
 
     input.1[last_solved].get_unmarked_sum(last_mask) * last_num
 }
