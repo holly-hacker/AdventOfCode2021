@@ -1,3 +1,63 @@
+pub use paste::paste;
+use std::fmt::Display;
+
+#[macro_export]
+macro_rules! aoc_setup {
+    ($type:ident $(, test $index:literal: $test_result:expr)*) => {
+        // TODO: pub use another macro that creates benchmarks?
+
+        fn main() {
+            aoc_lib::run($type);
+        }
+
+        $(
+            aoc_lib::paste! {
+                #[test]
+                fn [<solve_sample_part_ $index>]() {
+                    let input = include_str!("../sample.txt");
+                    let parsed = $type::parse_input(input);
+                    assert_eq!($test_result, $type::[< solve_ $index >](&parsed));
+                }
+            }
+        )*
+    };
+}
+
+pub trait AdventOfCode {
+    type Input;
+    type Output;
+
+    fn parse_input(s: &str) -> Self::Input;
+    fn solve_1(input: &Self::Input) -> Self::Output;
+    fn solve_2(input: &Self::Input) -> Self::Output;
+}
+
+/// Run and time just part 1 of a. AdventOfCode solution.
+pub fn run_part_1<T: AdventOfCode<Output = impl Display>>(_: T) {
+    let input = read_stdin();
+    let (parsed, parsed_time) = time(|| T::parse_input(&input));
+    let (solve_1, solve_1_time) = time(|| T::solve_1(&parsed));
+
+    println!("Solution to part 1: {}", solve_1);
+
+    println!("Parsing took: {:?}", parsed_time);
+    println!("Solving part 1 took: {:?}", solve_1_time);
+}
+
+pub fn run<T: AdventOfCode<Output = impl Display>>(_: T) {
+    let input = read_stdin();
+    let (parsed, parsed_time) = time(|| T::parse_input(&input));
+    let (solve_1, solve_1_time) = time(|| T::solve_1(&parsed));
+    let (solve_2, solve_2_time) = time(|| T::solve_2(&parsed));
+
+    println!("Solution to part 1: {}", solve_1);
+    println!("Solution to part 2: {}", solve_2);
+
+    println!("Parsing took: {:?}", parsed_time);
+    println!("Solving part 1 took: {:?}", solve_1_time);
+    println!("Solving part 2 took: {:?}", solve_2_time);
+}
+
 /// Executes some code and records the time it took to run
 pub fn time<T, F>(fun: F) -> (T, std::time::Duration)
 where

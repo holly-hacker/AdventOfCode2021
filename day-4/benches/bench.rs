@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use aoc_lib::AdventOfCode;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 #[path = "../src/main.rs"]
@@ -8,32 +9,32 @@ mod main;
 fn bench_main(c: &mut Criterion) {
     c.bench_function("parse input", |b| {
         let input = include_str!("../input.txt");
-        b.iter(|| main::parse_input(black_box(input)))
+        b.iter(|| main::Day4::parse_input(black_box(input)))
     });
 
     c.bench_function("solve 1", |b| {
-        let input = main::parse_input(include_str!("../input.txt"));
-        b.iter(|| main::solve_1(black_box(&input)))
+        let input = main::Day4::parse_input(include_str!("../input.txt"));
+        b.iter(|| main::Day4::solve_1(black_box(&input)))
     });
 
     c.bench_function("solve 2", |b| {
-        let input = main::parse_input(include_str!("../input.txt"));
-        b.iter(|| main::solve_2(black_box(&input)))
+        let input = main::Day4::parse_input(include_str!("../input.txt"));
+        b.iter(|| main::Day4::solve_2(black_box(&input)))
     });
 
     c.bench_function("parse sample input", |b| {
         let input = include_str!("../sample.txt");
-        b.iter(|| main::parse_input(black_box(input)))
+        b.iter(|| main::Day4::parse_input(black_box(input)))
     });
 
     c.bench_function("solve 1 (sample input)", |b| {
-        let input = main::parse_input(include_str!("../sample.txt"));
-        b.iter(|| main::solve_1(black_box(&input)))
+        let input = main::Day4::parse_input(include_str!("../sample.txt"));
+        b.iter(|| main::Day4::solve_1(black_box(&input)))
     });
 
     c.bench_function("solve 2 (sample input)", |b| {
-        let input = main::parse_input(include_str!("../sample.txt"));
-        b.iter(|| main::solve_2(black_box(&input)))
+        let input = main::Day4::parse_input(include_str!("../sample.txt"));
+        b.iter(|| main::Day4::solve_2(black_box(&input)))
     });
 }
 

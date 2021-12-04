@@ -1,7 +1,8 @@
-use std::ops::IndexMut;
-
 use aoc_lib::*;
 use itertools::Itertools;
+use std::ops::IndexMut;
+
+aoc_setup!(Day4, test 1: 4512, test 2: 1924);
 
 #[derive(Debug)]
 pub struct Input(Vec<u8>, Vec<Board>);
@@ -43,130 +44,109 @@ impl Board {
     }
 }
 
-fn main() {
-    let input = read_stdin();
-    let (parsed, parsed_time) = time(|| parse_input(&input));
-    let (solve_1, solve_1_time) = time(|| solve_1(&parsed));
-    let (solve_2, solve_2_time) = time(|| solve_2(&parsed));
+pub struct Day4;
 
-    println!("Solution to part 1: {}", solve_1);
-    println!("Solution to part 2: {}", solve_2);
+impl AdventOfCode for Day4 {
+    type Input = Input;
+    type Output = usize;
 
-    println!("Parsing took: {:?}", parsed_time);
-    println!("Solving part 1 took: {:?}", solve_1_time);
-    println!("Solving part 2 took: {:?}", solve_2_time);
-}
+    fn parse_input(s: &str) -> Self::Input {
+        let mut iter = s.lines().filter(|line| line.len() > 0);
 
-pub fn parse_input(s: &str) -> Input {
-    let mut iter = s.lines().filter(|line| line.len() > 0);
+        let x = iter
+            .next()
+            .unwrap()
+            .split(',')
+            .map(|s| s.parse::<u8>().unwrap())
+            .collect();
 
-    let x = iter
-        .next()
-        .unwrap()
-        .split(',')
-        .map(|s| s.parse::<u8>().unwrap())
-        .collect();
-
-    let boards = iter
-        .chunks(5)
-        .into_iter()
-        .map(|chunk| {
-            let mut numbers = [0; 5 * 5];
-            for (i, n) in chunk.into_iter().enumerate() {
-                n.split(' ')
-                    .filter(|x| x.len() > 0)
-                    .enumerate()
-                    .for_each(|(j, s)| {
-                        numbers[i * 5 + j] = s.parse::<u8>().unwrap();
-                    });
-            }
-            Board(numbers)
-        })
-        .collect();
-
-    Input(x, boards)
-}
-
-pub fn solve_1(input: &Input) -> usize {
-    let mut solve_mask = vec![0u32; input.1.len()];
-    let mut last_num = 0;
-
-    let board_index = input
-        .0
-        .iter()
-        .find_map(|&num| {
-            input.1.iter().enumerate().find_map(|(i, board)| {
-                board.update_mask(num, solve_mask.index_mut(i));
-                if Board::is_solved(solve_mask[i]) {
-                    last_num = num as usize;
-                    Some(i)
-                } else {
-                    None
+        let boards = iter
+            .chunks(5)
+            .into_iter()
+            .map(|chunk| {
+                let mut numbers = [0; 5 * 5];
+                for (i, n) in chunk.into_iter().enumerate() {
+                    n.split(' ')
+                        .filter(|x| x.len() > 0)
+                        .enumerate()
+                        .for_each(|(j, s)| {
+                            numbers[i * 5 + j] = s.parse::<u8>().unwrap();
+                        });
                 }
+                Board(numbers)
             })
-        })
-        .unwrap();
+            .collect();
 
-    input.1[board_index].get_unmarked_sum(solve_mask[board_index]) * last_num
-}
+        Input(x, boards)
+    }
 
-pub fn solve_2(input: &Input) -> usize {
-    let mut solve_mask = vec![0u32; input.1.len()];
-    let mut last_num = 0;
-    let mut solved_list = vec![0usize; (input.1.len() / (usize::BITS as usize)) + 1];
-    let mut last_solved = 0;
-    let mut last_mask = 0;
-    let mut solved_count = 0; // i'm too lazy to write a check against solved_list
+    fn solve_1(input: &Self::Input) -> Self::Output {
+        let mut solve_mask = vec![0u32; input.1.len()];
+        let mut last_num = 0;
 
-    input
-        .0
-        .iter()
-        .filter_map(|&num| {
-            input
-                .1
-                .iter()
-                .enumerate()
-                .filter_map(|(i, board)| {
+        let board_index = input
+            .0
+            .iter()
+            .find_map(|&num| {
+                input.1.iter().enumerate().find_map(|(i, board)| {
                     board.update_mask(num, solve_mask.index_mut(i));
+                    if Board::is_solved(solve_mask[i]) {
+                        last_num = num as usize;
+                        Some(i)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap();
 
-                    let solved_ref = solved_list.index_mut(i / (usize::BITS as usize));
-                    let solved_bit_idx = i % (usize::BITS as usize);
+        input.1[board_index].get_unmarked_sum(solve_mask[board_index]) * last_num
+    }
 
-                    if ((*solved_ref) & (1 << solved_bit_idx)) == 0 {
-                        if Board::is_solved(solve_mask[i]) {
-                            last_num = num as usize;
-                            last_solved = i;
-                            last_mask = solve_mask[last_solved];
-                            *solved_ref |= 1 << solved_bit_idx;
-                            solved_count += 1;
+    fn solve_2(input: &Self::Input) -> Self::Output {
+        let mut solve_mask = vec![0u32; input.1.len()];
+        let mut last_num = 0;
+        let mut solved_list = vec![0usize; (input.1.len() / (usize::BITS as usize)) + 1];
+        let mut last_solved = 0;
+        let mut last_mask = 0;
+        let mut solved_count = 0; // i'm too lazy to write a check against solved_list
 
-                            // check if everything is solved
-                            if solved_count == input.1.len() {
-                                return Some(());
+        input
+            .0
+            .iter()
+            .filter_map(|&num| {
+                input
+                    .1
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, board)| {
+                        board.update_mask(num, solve_mask.index_mut(i));
+
+                        let solved_ref = solved_list.index_mut(i / (usize::BITS as usize));
+                        let solved_bit_idx = i % (usize::BITS as usize);
+
+                        if ((*solved_ref) & (1 << solved_bit_idx)) == 0 {
+                            if Board::is_solved(solve_mask[i]) {
+                                last_num = num as usize;
+                                last_solved = i;
+                                last_mask = solve_mask[last_solved];
+                                *solved_ref |= 1 << solved_bit_idx;
+                                solved_count += 1;
+
+                                // check if everything is solved
+                                if solved_count == input.1.len() {
+                                    return Some(());
+                                }
                             }
                         }
-                    }
 
-                    None
-                })
-                .next()
-        })
-        .next()
-        .unwrap();
+                        None
+                    })
+                    .next()
+            })
+            .next()
+            .unwrap();
 
-    input.1[last_solved].get_unmarked_sum(last_mask) * last_num
-}
-
-#[test]
-fn test_solve_1() {
-    let input = include_str!("../sample.txt");
-    let parsed = parse_input(input);
-    assert_eq!(4512, solve_1(&parsed));
-}
-
-#[test]
-fn test_solve_2() {
-    let input = include_str!("../sample.txt");
-    let parsed = parse_input(input);
-    assert_eq!(1924, solve_2(&parsed));
+        input.1[last_solved].get_unmarked_sum(last_mask) * last_num
+    }
 }
