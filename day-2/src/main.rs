@@ -1,7 +1,7 @@
 use aoc_lib::*;
 
 #[derive(Clone, Copy)]
-enum Direction {
+pub enum Direction {
     Forward,
     Down,
     Up,
@@ -21,7 +21,7 @@ fn main() {
     println!("Solving part 2 took: {:?}", solve_2_time);
 }
 
-fn parse_input(s: &str) -> Vec<(Direction, isize)> {
+pub fn parse_input(s: &str) -> Vec<(Direction, isize)> {
     s.lines()
         .map(|line| {
             let mut split = line.split(' ');
@@ -38,7 +38,7 @@ fn parse_input(s: &str) -> Vec<(Direction, isize)> {
         .collect()
 }
 
-fn solve_1(input: &[(Direction, isize)]) -> isize {
+pub fn solve_1(input: &[(Direction, isize)]) -> isize {
     let sub = input
         .into_iter()
         .fold((0, 0), |sub, &(dir, dist)| match dir {
@@ -49,7 +49,7 @@ fn solve_1(input: &[(Direction, isize)]) -> isize {
     sub.0 * sub.1
 }
 
-fn solve_2(input: &[(Direction, isize)]) -> isize {
+pub fn solve_2(input: &[(Direction, isize)]) -> isize {
     let sub = input
         .into_iter()
         .fold((0, 0, 0), |sub, &(dir, dist)| match dir {

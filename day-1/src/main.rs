@@ -14,15 +14,15 @@ fn main() {
     println!("Solving part 2 took: {:?}", solve_2_time);
 }
 
-fn parse_input(s: &str) -> Vec<usize> {
+pub fn parse_input(s: &str) -> Vec<usize> {
     s.lines().map(|l| l.parse().unwrap()).collect()
 }
 
-fn solve_1(input: &[usize]) -> usize {
+pub fn solve_1(input: &[usize]) -> usize {
     input.windows(2).filter(|w| w[0] < w[1]).count()
 }
 
-fn solve_2(input: &[usize]) -> usize {
+pub fn solve_2(input: &[usize]) -> usize {
     input.windows(4).filter(|w| w[0] < w[3]).count()
 }
 

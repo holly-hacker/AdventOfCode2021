@@ -180,6 +180,7 @@ name = "day-1"
 version = "0.1.0"
 dependencies = [
  "aoc-lib",
+ "criterion",
 ]
 
 [[package]]
@@ -187,6 +188,7 @@ name = "day-2"
 version = "0.1.0"
 dependencies = [
  "aoc-lib",
+ "criterion",
 ]
 
 [[package]]
