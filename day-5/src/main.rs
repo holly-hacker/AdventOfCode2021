@@ -2,10 +2,43 @@ use aoc_lib::*;
 
 aoc_setup!(Day5, sample 1: 5, sample 2: 12, part 1: 4826, part 2: 16793);
 
+pub struct Grid {
+    grid: Vec<u8>,
+    stride: usize,
+}
+
+impl Grid {
+    pub fn create(input: &[((usize, usize), (usize, usize))]) -> Self {
+        let width = input
+            .iter()
+            .map(|((x1, _), (x2, _))| x1.max(x2))
+            .fold(0usize, |acc, &x| acc.max(x + 1));
+        let height = input
+            .iter()
+            .map(|((_, y1), (_, y2))| y1.max(y2))
+            .fold(0usize, |acc, &y| acc.max(y + 1));
+
+        let grid = vec![0u8; width * height];
+
+        Self {
+            grid,
+            stride: width,
+        }
+    }
+
+    pub fn increment(&mut self, x: usize, y: usize) {
+        self.grid[(x + y * self.stride)] += 1;
+    }
+
+    pub fn count_with_min_value(&self, min_value: u8) -> usize {
+        self.grid.iter().filter(|&&v| v >= min_value).count()
+    }
+}
+
 pub struct Day5;
 
 impl AdventOfCode for Day5 {
-    type Input = Vec<((u16, u16), (u16, u16))>;
+    type Input = Vec<((usize, usize), (usize, usize))>;
     type Output = usize;
 
     fn parse_input(s: &str) -> Self::Input {
@@ -23,66 +56,42 @@ impl AdventOfCode for Day5 {
     }
 
     fn solve_1(input: &Self::Input) -> Self::Output {
-        let max_x = input
-            .iter()
-            .map(|((x1, _), (x2, _))| x1.max(x2))
-            .fold(0u16, |acc, &x| acc.max(x + 1));
-        let max_y = input
-            .iter()
-            .map(|((_, y1), (_, y2))| y1.max(y2))
-            .fold(0u16, |acc, &y| acc.max(y + 1));
-
-        let mut grid = vec![0u8; max_x as usize * max_y as usize];
+        let mut grid = Grid::create(input);
 
         for &((x1, y1), (x2, y2)) in input {
-            // grid[(x as usize + y as usize * max_x as usize)] += 1;
             if x1 == x2 {
                 for y in y1.min(y2)..=y1.max(y2) {
-                    grid[(x1 as usize + y as usize * max_x as usize)] += 1;
+                    grid.increment(x1, y);
                 }
             } else if y1 == y2 {
                 for x in x1.min(x2)..=x1.max(x2) {
-                    grid[(x as usize + y1 as usize * max_x as usize)] += 1;
+                    grid.increment(x, y1);
                 }
             }
         }
 
-        grid.iter().filter(|&&x| x >= 2).count()
+        grid.count_with_min_value(2)
     }
 
     fn solve_2(input: &Self::Input) -> Self::Output {
-        let max_x = input
-            .iter()
-            .map(|((x1, _), (x2, _))| x1.max(x2))
-            .fold(0u16, |acc, &x| acc.max(x + 1));
-        let max_y = input
-            .iter()
-            .map(|((_, y1), (_, y2))| y1.max(y2))
-            .fold(0u16, |acc, &y| acc.max(y + 1));
-
-        let mut grid = vec![0u8; max_x as usize * max_y as usize];
+        let mut grid = Grid::create(input);
 
         for &((x1, y1), (x2, y2)) in input {
-            // grid[(x as usize + y as usize * max_x as usize)] += 1;
             if x1 == x2 {
                 for y in y1.min(y2)..=y1.max(y2) {
-                    grid[(x1 as usize + y as usize * max_x as usize)] += 1;
+                    grid.increment(x1, y);
                 }
             } else if y1 == y2 {
                 for x in x1.min(x2)..=x1.max(x2) {
-                    grid[(x as usize + y1 as usize * max_x as usize)] += 1;
+                    grid.increment(x, y1);
                 }
-            } else if (x1 as i16 - x2 as i16).abs() == (y1 as i16 - y2 as i16).abs() {
+            } else if (x1 as isize - x2 as isize).abs() == (y1 as isize - y2 as isize).abs() {
                 let mut x = x1;
                 let mut y = y1;
 
-                loop {
-                    grid[(x as usize + y as usize * max_x as usize)] += 1;
+                grid.increment(x, y);
 
-                    if x == x2 && y == y2 {
-                        break;
-                    }
-
+                while x != x2 || y != y2 {
                     if x1 < x2 {
                         x += 1;
                     } else {
@@ -93,10 +102,14 @@ impl AdventOfCode for Day5 {
                     } else {
                         y -= 1;
                     }
+
+                    grid.increment(x, y);
                 }
             }
         }
 
-        grid.iter().filter(|&&x| x >= 2).count()
+        // println!("Grid created in {:?}", grid_time);
+
+        grid.count_with_min_value(2)
     }
 }
