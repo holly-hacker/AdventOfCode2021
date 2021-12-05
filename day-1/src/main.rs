@@ -1,6 +1,6 @@
 use aoc_lib::*;
 
-aoc_setup!(Day1, test 1: 7, test 2: 5);
+aoc_setup!(Day1, sample 1: 7, sample 2: 5, part 1: 1759, part 2: 1805);
 
 pub struct Day1;
 

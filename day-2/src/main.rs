@@ -1,6 +1,6 @@
 use aoc_lib::*;
 
-aoc_setup!(Day2, test 1: 150, test 2: 900);
+aoc_setup!(Day2, sample 1: 150, sample 2: 900, part 1: 1654760, part 2: 1956047400);
 
 #[derive(Clone, Copy)]
 pub enum Direction {

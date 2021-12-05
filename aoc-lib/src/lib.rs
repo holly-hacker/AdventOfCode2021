@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 #[macro_export]
 macro_rules! aoc_setup {
-    ($type:ident $(, test $index:literal: $test_result:expr)*) => {
+    ($type:ident $(, $test_type:ident $index:literal: $test_result:expr)*) => {
         // TODO: pub use another macro that creates benchmarks?
 
         fn main() {
@@ -11,15 +11,28 @@ macro_rules! aoc_setup {
         }
 
         $(
-            aoc_lib::paste! {
-                #[test]
-                fn [<solve_sample_part_ $index>]() {
-                    let input = include_str!("../sample.txt");
-                    let parsed = $type::parse_input(input);
-                    assert_eq!($test_result, $type::[< solve_ $index >](&parsed));
-                }
-            }
+            aoc_setup!(test_impl $test_type $type $index: $test_result);
         )*
+    };
+    (test_impl sample $type:ident $index:literal: $test_result:expr) => {
+        aoc_lib::paste! {
+            #[test]
+            fn [<solve_sample_part_ $index>]() {
+                let input = include_str!("../sample.txt");
+                let parsed = $type::parse_input(input);
+                assert_eq!($test_result, $type::[< solve_ $index >](&parsed));
+            }
+        }
+    };
+    (test_impl part $type:ident $index:literal: $test_result:expr) => {
+        aoc_lib::paste! {
+            #[test]
+            fn [<solve_part_ $index>]() {
+                let input = include_str!("../input.txt");
+                let parsed = $type::parse_input(input);
+                assert_eq!($test_result, $type::[< solve_ $index >](&parsed));
+            }
+        }
     };
 }
 

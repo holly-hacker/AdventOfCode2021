@@ -2,7 +2,7 @@ use aoc_lib::*;
 use itertools::Itertools;
 use std::ops::IndexMut;
 
-aoc_setup!(Day4, test 1: 4512, test 2: 1924);
+aoc_setup!(Day4, sample 1: 4512, sample 2: 1924, part 1: 16674, part 2: 7075);
 
 #[derive(Debug)]
 pub struct Input(Vec<u8>, Vec<Board>);
