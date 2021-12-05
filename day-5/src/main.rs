@@ -2,12 +2,13 @@ use aoc_lib::*;
 
 aoc_setup!(Day5, sample 1: 5, sample 2: 12, part 1: 4826, part 2: 16793);
 
-pub struct Grid {
+pub struct Grid<const MIN_VALUE: u8> {
     grid: Vec<u8>,
     stride: usize,
+    min_count: usize,
 }
 
-impl Grid {
+impl<const MIN_VALUE: u8> Grid<{ MIN_VALUE }> {
     pub fn create(input: &[((usize, usize), (usize, usize))]) -> Self {
         let width = input
             .iter()
@@ -18,20 +19,21 @@ impl Grid {
             .map(|((_, y1), (_, y2))| y1.max(y2))
             .fold(0usize, |acc, &y| acc.max(y + 1));
 
-        let grid = vec![0u8; width * height];
-
         Self {
-            grid,
+            grid: vec![0u8; width * height],
             stride: width,
+            min_count: 0,
         }
     }
 
     pub fn increment(&mut self, x: usize, y: usize) {
-        self.grid[(x + y * self.stride)] += 1;
-    }
+        let ptr = self.grid.get_mut(x + y * self.stride).unwrap();
 
-    pub fn count_with_min_value(&self, min_value: u8) -> usize {
-        self.grid.iter().filter(|&&v| v >= min_value).count()
+        *ptr += 1;
+
+        if *ptr == MIN_VALUE {
+            self.min_count += 1;
+        }
     }
 }
 
@@ -56,7 +58,7 @@ impl AdventOfCode for Day5 {
     }
 
     fn solve_1(input: &Self::Input) -> Self::Output {
-        let mut grid = Grid::create(input);
+        let mut grid = Grid::<2>::create(input);
 
         for &((x1, y1), (x2, y2)) in input {
             if x1 == x2 {
@@ -70,11 +72,11 @@ impl AdventOfCode for Day5 {
             }
         }
 
-        grid.count_with_min_value(2)
+        grid.min_count
     }
 
     fn solve_2(input: &Self::Input) -> Self::Output {
-        let mut grid = Grid::create(input);
+        let mut grid = Grid::<2>::create(input);
 
         for &((x1, y1), (x2, y2)) in input {
             if x1 == x2 {
@@ -110,6 +112,6 @@ impl AdventOfCode for Day5 {
 
         // println!("Grid created in {:?}", grid_time);
 
-        grid.count_with_min_value(2)
+        grid.min_count
     }
 }
