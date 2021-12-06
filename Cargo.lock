@@ -217,7 +217,14 @@ version = "0.1.0"
 dependencies = [
  "aoc-lib",
  "criterion",
- "itertools",
+]
+
+[[package]]
+name = "day-6"
+version = "0.1.0"
+dependencies = [
+ "aoc-lib",
+ "criterion",
 ]
 
 [[package]]
