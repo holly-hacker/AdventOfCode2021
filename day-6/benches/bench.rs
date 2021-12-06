@@ -1,5 +1,9 @@
 #![allow(dead_code)]
 
+// uncomment for unstable version
+// #![allow(unused_attributes, incomplete_features)]
+// #![feature(generic_const_exprs, const_for, const_mut_refs)]
+
 use aoc_lib::AdventOfCode;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
