@@ -17,16 +17,14 @@ impl AdventOfCode for Day7 {
         let min = *input.iter().min().unwrap();
         let max = *input.iter().max().unwrap();
 
-        let mut lowest_cost = usize::MAX;
-        for i in min..=max {
-            let cost = input
-                .iter()
-                .map(|&x| (x as isize - i as isize).abs() as usize)
-                .sum();
-            lowest_cost = lowest_cost.min(cost);
-        }
-
-        lowest_cost
+        (min..=max).fold(usize::MAX, |acc, i| {
+            acc.min(
+                input
+                    .iter()
+                    .map(|&x| ((x as isize - i as isize).abs() as usize))
+                    .sum(),
+            )
+        })
     }
 
     fn solve_2(input: &Self::Input) -> Self::Output {
@@ -34,19 +32,19 @@ impl AdventOfCode for Day7 {
         let min = *input.iter().min().unwrap();
         let max = *input.iter().max().unwrap();
 
-        let mut lowest_cost = usize::MAX;
-        for i in min..=max {
-            let cost = input
-                .iter()
-                .map(|&x| calculate_fuel((x as isize - i as isize).abs() as usize))
-                .sum();
-            lowest_cost = lowest_cost.min(cost);
-        }
-
-        lowest_cost
+        (min..=max).fold(usize::MAX, |acc, i| {
+            acc.min(
+                input
+                    .iter()
+                    .map(|&x| calculate_fuel((x as isize - i as isize).abs() as usize))
+                    .sum(),
+            )
+        })
     }
 }
 
 fn calculate_fuel(input: usize) -> usize {
+    // seems like rust is very smart: https://godbolt.org/z/WscWfvfdr
+    // TODO: figure out this algorithm and implement it myself
     (1..=input).sum()
 }
