@@ -10,6 +10,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "array-const-fn-init"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bcb85e548c05d407fa6faff46b750ba287714ef32afc0f5e15b4641ffd6affb"
+
+[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -232,6 +238,7 @@ name = "day-7"
 version = "0.1.0"
 dependencies = [
  "aoc-lib",
+ "array-const-fn-init",
  "criterion",
 ]
 

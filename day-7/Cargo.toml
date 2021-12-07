@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
+array-const-fn-init = "0.1.1"
 
 [dev-dependencies]
 criterion = "0.3"
@@ -14,3 +15,5 @@ criterion = "0.3"
 [[bench]]
 name = "bench"
 harness = false
+
+[features]
