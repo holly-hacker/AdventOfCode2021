@@ -3,7 +3,7 @@ use aoc_lib::*;
 aoc_setup!(Day8, sample 1: 26, sample 2: 61229, part 1: 530, part 2: 1051087);
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub struct Digit(u8);
+pub struct Digit(u8, u32);
 
 impl std::fmt::Debug for Digit {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -15,25 +15,16 @@ impl Digit {
     pub fn parse(input: &str) -> Self {
         debug_assert!(input.len() <= 7);
 
-        let mut ret = 0u8;
-        input.as_bytes().iter().for_each(|&c| {
+        let x = input.as_bytes().iter().fold(0u8, |ret, &c| {
             debug_assert!(c >= b'a' && c <= b'g');
-            match c {
-                b'a' => ret |= 1 << 0,
-                b'b' => ret |= 1 << 1,
-                b'c' => ret |= 1 << 2,
-                b'd' => ret |= 1 << 3,
-                b'e' => ret |= 1 << 4,
-                b'f' => ret |= 1 << 5,
-                b'g' => ret |= 1 << 6,
-                _ => unreachable!(),
-            }
+            ret | 1 << (7 + c - b'g')
         });
-        Digit(ret)
+
+        Digit(x, x.count_ones())
     }
 
     pub fn active_segments(&self) -> u32 {
-        self.0.count_ones()
+        self.1
     }
 
     pub fn get_number_from_segments(&self) -> Option<usize> {
@@ -63,10 +54,9 @@ impl AdventOfCode for Day8 {
             .map(|l| {
                 let (input_str, output_str) = l.split_once(" | ").unwrap();
 
-                let mut input = [Digit(0); 10];
-                let mut output = [Digit(0); 4];
+                let mut input = [Digit(0, 0); 10];
+                let mut output = [Digit(0, 0); 4];
 
-                // TODO: may be faster with a normal split
                 input_str.split(' ').enumerate().for_each(|(i, s)| {
                     input[i] = Digit::parse(s);
                 });
@@ -82,13 +72,10 @@ impl AdventOfCode for Day8 {
     fn solve_1(input: &Self::Input) -> Self::Output {
         input
             .iter()
-            .map(|line| {
-                line.output
-                    .iter()
-                    .filter(|&digit| digit.get_number_from_segments().is_some())
-                    .count()
-            })
-            .sum()
+            .map(|line| line.output)
+            .flatten()
+            .filter(|digit| digit.get_number_from_segments().is_some())
+            .count()
     }
 
     fn solve_2(input: &Self::Input) -> Self::Output {
@@ -97,33 +84,20 @@ impl AdventOfCode for Day8 {
 }
 
 pub fn solve_2_single_line(line: &InputLine) -> usize {
-    let iter = line.input.iter().chain(line.output.iter()).cloned();
+    let mut known_digits = [Digit(0, 0); 10];
 
-    let mut known_digits = [Digit(0); 10];
-
-    let mut unknown_digits = [Digit(0); 10];
-    let mut idx = 0;
-    for digit in iter {
-        if !unknown_digits.contains(&digit) {
-            unknown_digits[idx] = digit;
-            idx += 1;
-
-            match digit.get_number_from_segments() {
-                Some(1) => known_digits[1] = digit,
-                Some(4) => known_digits[4] = digit,
-                Some(7) => known_digits[7] = digit,
-                Some(8) => known_digits[8] = digit,
-                _ => (),
-            };
-
-            if idx == 10 {
-                break;
-            }
-        }
+    for digit in line.input {
+        match digit.get_number_from_segments() {
+            Some(1) => known_digits[1] = digit,
+            Some(4) => known_digits[4] = digit,
+            Some(7) => known_digits[7] = digit,
+            Some(8) => known_digits[8] = digit,
+            _ => (),
+        };
     }
 
     // can know what is 0, 6 and 9 through the segment that differs with digit 8
-    for digit in unknown_digits {
+    for digit in line.input {
         match digit.active_segments() {
             // 0, 6, 9
             6 => {
@@ -160,7 +134,7 @@ pub fn solve_2_single_line(line: &InputLine) -> usize {
 
     // remaining is 2 and 5. just compare to one of the other numbers
     // in our case, use 6
-    for digit in unknown_digits {
+    for digit in line.input {
         if digit.active_segments() == 5 && digit != known_digits[3] {
             let matching_segments = digit.0 & known_digits[6].0;
 
@@ -173,24 +147,25 @@ pub fn solve_2_single_line(line: &InputLine) -> usize {
     }
 
     // all digits are known!
-    let num = known_digits
+    let thousands = known_digits
         .iter()
         .position(|&x| line.output[0] == x)
         .unwrap()
-        * 1000
-        + known_digits
-            .iter()
-            .position(|&x| line.output[1] == x)
-            .unwrap()
-            * 100
-        + known_digits
-            .iter()
-            .position(|&x| line.output[2] == x)
-            .unwrap()
-            * 10
-        + known_digits
-            .iter()
-            .position(|&x| line.output[3] == x)
-            .unwrap();
-    num
+        * 1000;
+    let hundreds = known_digits
+        .iter()
+        .position(|&x| line.output[1] == x)
+        .unwrap()
+        * 100;
+    let tens = known_digits
+        .iter()
+        .position(|&x| line.output[2] == x)
+        .unwrap()
+        * 10;
+    let the_rest_idk = known_digits
+        .iter()
+        .position(|&x| line.output[3] == x)
+        .unwrap();
+
+    thousands + hundreds + tens + the_rest_idk
 }
