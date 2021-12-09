@@ -90,23 +90,11 @@ impl Field2D<u8> {
         target.data[idx] = num;
         size += 1;
 
-        let (x, y) = ((idx % self.stride) as isize, (idx / self.stride) as isize);
-        [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+        self.neighbour_indices(idx)
             .into_iter()
-            .filter(|&(x, y)| {
-                (x < self.stride as isize)
-                    && (y < (self.data.len() / self.stride) as isize)
-                    && (x >= 0)
-                    && (y >= 0)
-            })
-            .for_each(|(x, y)| {
-                size = self.flood_fill_recursive(
-                    target,
-                    num,
-                    y as usize * self.stride + x as usize,
-                    size,
-                )
-            });
+            .filter_map(|x| x)
+            .for_each(|idx| size = self.flood_fill_recursive(target, num, idx, size));
+
         size
     }
 }
