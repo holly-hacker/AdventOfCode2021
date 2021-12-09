@@ -13,41 +13,35 @@ impl<T> Field2D<T>
 where
     T: Copy,
 {
-    pub fn item_at(&self, x: isize, y: isize) -> Option<T> {
-        if x < 0 || y < 0 {
-            return None;
-        }
-
-        let x = x as usize;
-        let y = y as usize;
-        let x_max = self.stride - 1;
-        let y_max = self.data.len() / self.stride - 1;
-        if x > x_max || y > y_max {
-            return None;
-        }
-        Some(self.data[y * self.stride + x])
-    }
-
-    pub fn item_at_unsafe(&self, x: usize, y: usize) -> T {
-        self.data[y * self.stride + x]
-    }
-
-    pub fn neighbours(&self, x: usize, y: usize) -> [Option<T>; 4] {
-        let x = x as isize;
-        let y = y as isize;
+    pub fn neighbour_indices(&self, idx: usize) -> [Option<usize>; 4] {
+        let x = idx % self.stride;
         [
-            self.item_at(x - 1, y),
-            self.item_at(x + 1, y),
-            self.item_at(x, y - 1),
-            self.item_at(x, y + 1),
+            if idx >= self.stride {
+                Some(idx - self.stride)
+            } else {
+                None
+            },
+            if idx + self.stride < self.data.len() {
+                Some(idx + self.stride)
+            } else {
+                None
+            },
+            if x > 0 { Some(idx - 1) } else { None },
+            if x < self.stride - 1 {
+                Some(idx + 1)
+            } else {
+                None
+            },
         ]
     }
 }
 
 impl Field2D<u8> {
-    pub fn flood_fill(&self, target: &mut Field2D<usize>) -> usize {
+    /// executes a flood fill algorithm and returns the sizes of the largest 3 regions
+    pub fn flood_fill(&self, target: &mut Field2D<usize>) -> (usize, usize, usize) {
         let mut idx = 0;
         let mut num = 1;
+        let mut regions = (0, 0, 0);
         loop {
             let idx_data = target.data.get(idx);
             if idx_data.is_none() {
@@ -58,24 +52,43 @@ impl Field2D<u8> {
                 continue;
             }
 
-            self.flood_fill_recursive(target, num, idx);
+            let size = self.flood_fill_recursive(target, num, idx, 0);
+
+            if size < regions.0 {
+                regions = (regions.0, regions.1, regions.2);
+            } else if size < regions.1 {
+                regions = (size, regions.1, regions.2);
+            } else if size < regions.2 {
+                regions = (regions.1, size, regions.2);
+            } else {
+                regions = (regions.1, regions.2, size);
+            }
+
             num += 1;
             idx += 1;
         }
 
-        num
+        regions
     }
 
-    fn flood_fill_recursive(&self, target: &mut Field2D<usize>, num: usize, idx: usize) -> () {
+    /// flood fills a single region and returns its size
+    fn flood_fill_recursive(
+        &self,
+        target: &mut Field2D<usize>,
+        num: usize,
+        idx: usize,
+        mut size: usize,
+    ) -> usize {
         if idx >= target.data.len() || target.data[idx] != 0 {
-            return;
+            return size;
         }
 
         if self.data[idx] == 9 {
-            return;
+            return size;
         }
 
         target.data[idx] = num;
+        size += 1;
 
         let (x, y) = ((idx % self.stride) as isize, (idx / self.stride) as isize);
         [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
@@ -87,8 +100,14 @@ impl Field2D<u8> {
                     && (y >= 0)
             })
             .for_each(|(x, y)| {
-                self.flood_fill_recursive(target, num, y as usize * self.stride + x as usize);
+                size = self.flood_fill_recursive(
+                    target,
+                    num,
+                    y as usize * self.stride + x as usize,
+                    size,
+                )
             });
+        size
     }
 }
 
@@ -110,16 +129,14 @@ impl AdventOfCode for Day9 {
     }
 
     fn solve_1(input: &Self::Input) -> Self::Output {
-        (0..(input.data.len() / input.stride))
-            .map(|y| (0..input.stride).map(move |x| (x, y)))
-            .flatten()
-            .filter_map(|(x, y)| {
-                let center = input.item_at_unsafe(x, y);
-                let neighbours = input.neighbours(x, y);
-                let higher_neighbours = neighbours
+        (0..input.data.len())
+            .filter_map(|idx| {
+                let center = input.data[idx];
+                let higher_neighbours = input
+                    .neighbour_indices(idx)
                     .iter()
                     .filter(|&&n| match n {
-                        Some(n) => n > center,
+                        Some(n) => input.data[n as usize] > center,
                         None => true,
                     })
                     .count();
@@ -137,25 +154,7 @@ impl AdventOfCode for Day9 {
             data: vec![0; input.data.len()],
             stride: input.stride,
         };
-        let count = input.flood_fill(&mut basin_field);
-
-        let (a, b, c) = (1..count)
-            .map(|i| basin_field.data.iter().filter(|&&x| x == i).count())
-            .fold((0, 0, 0), |acc, n| {
-                if n < acc.0 {
-                    (acc.0, acc.1, acc.2)
-                } else {
-                    if n < acc.1 {
-                        (n, acc.1, acc.2)
-                    } else {
-                        if n < acc.2 {
-                            (acc.1, n, acc.2)
-                        } else {
-                            (acc.1, acc.2, n)
-                        }
-                    }
-                }
-            });
+        let (a, b, c) = input.flood_fill(&mut basin_field);
 
         a * b * c
     }
