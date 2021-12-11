@@ -7,6 +7,7 @@ pub const HEIGHT: usize = 10;
 
 #[derive(Clone)]
 pub struct Input {
+    // NOTE: very minor improvement (noise?) to part 1 and 2 if data type is u32
     pub data: [u8; WIDTH * HEIGHT],
 }
 
@@ -30,27 +31,22 @@ impl Input {
         (0..self.data.len()).for_each(|idx| self.data[idx] += 1);
         (0..self.data.len()).for_each(|idx| self.flash_recursive(idx));
 
-        let mut flashes = 0;
-        self.data.iter_mut().for_each(|x| {
-            if *x == 0 {
-                flashes += 1;
-            }
-        });
-
-        flashes
+        self.data.iter().filter(|&&x| x == 0).count()
     }
 
     fn flash_recursive(&mut self, idx: usize) {
         if self.data[idx] > 9 {
             self.data[idx] = 0;
 
-            let neighbours = self.neighbour_indices(idx);
-            neighbours.into_iter().flatten().for_each(|n| {
-                if self.data[n] != 0 {
-                    self.data[n] += 1;
-                }
-                self.flash_recursive(n);
-            })
+            self.neighbour_indices(idx)
+                .into_iter()
+                .flatten()
+                .for_each(|n| {
+                    if self.data[n] != 0 {
+                        self.data[n] += 1;
+                        self.flash_recursive(n);
+                    }
+                })
         }
     }
 
