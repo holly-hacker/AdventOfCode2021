@@ -90,11 +90,10 @@ impl AdventOfCode for Day11 {
     fn solve_2(input: &Self::Input) -> Self::Output {
         let mut input = input.clone();
         (0..usize::MAX)
-            .filter_map(|i| match input.step() {
+            .find_map(|i| match input.step() {
                 100 => Some(i + 1),
                 _ => None,
             })
-            .next()
             .unwrap()
     }
 }
