@@ -1,5 +1,4 @@
-use aoc_lib::utils::*;
-use aoc_lib::*;
+use aoc_lib::{utils::Field2D, *};
 use either::Either;
 use tinyvec::{array_vec, ArrayVec};
 
@@ -16,12 +15,6 @@ impl Default for Fold {
     fn default() -> Self {
         Fold::AlongX(0)
     }
-}
-
-pub struct FoldableField2D<T> {
-    pub field: Field2D<T>,
-    pub width: usize,
-    pub height: usize,
 }
 
 pub struct Day13;
@@ -113,10 +106,7 @@ fn ocr(field: &Field2D<bool>, index: usize) -> u8 {
     LETTER_MAP
         .iter()
         .enumerate()
-        .filter_map(|(i, &l)| match l {
-            Some(letter) => Some((i, letter)),
-            None => None,
-        })
+        .filter_map(|(i, &l)| l.map(|letter| (i, letter)))
         .find(|&(_, letter)| {
             (0..6).all(|y| {
                 let idx = start_x + y * field.stride;
@@ -129,7 +119,7 @@ fn ocr(field: &Field2D<bool>, index: usize) -> u8 {
         .0 as u8
 }
 
-const fn parse_letter(data: [u8; 6]) -> Option<LETTER> {
+const fn parse_letter(data: [u8; 6]) -> Option<Letter> {
     Some([
         to_bool_map(data[0]),
         to_bool_map(data[1]),
@@ -149,9 +139,9 @@ const fn to_bool_map(num: u8) -> [bool; 4] {
     ]
 }
 
-type LETTER = [[bool; 4]; 6];
+type Letter = [[bool; 4]; 6];
 
-const LETTER_MAP: [Option<LETTER>; 26] = [
+const LETTER_MAP: [Option<Letter>; 26] = [
     parse_letter([0b0110, 0b1001, 0b1001, 0b1111, 0b1001, 0b1001]),
     parse_letter([0b1110, 0b1001, 0b1110, 0b1001, 0b1001, 0b1110]),
     parse_letter([0b0110, 0b1001, 0b1000, 0b1000, 0b1001, 0b0110]),

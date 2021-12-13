@@ -16,11 +16,6 @@ where
         Self { data, stride }
     }
 
-    // TODO: change with index or indexmut impl
-    pub fn get(&self, x: usize, y: usize) -> T {
-        self.data[x + y * self.stride]
-    }
-
     pub fn neighbour_indices(&self, idx: usize) -> [Option<usize>; 4] {
         let x = idx % self.stride;
         [
