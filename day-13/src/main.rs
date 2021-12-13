@@ -4,6 +4,7 @@ use aoc_lib::*;
 // TODO: part 2: FJAHJGAH
 aoc_setup!(Day13, sample 1: 17, sample 2: 16, part 1: 785, part 2: 98);
 
+#[derive(Clone, Copy)]
 pub enum Fold {
     AlongX(usize),
     AlongY(usize),
@@ -107,29 +108,19 @@ impl AdventOfCode for Day13 {
     fn solve_1(input: &Self::Input) -> Self::Output {
         // TODO: for day 1, I don't need to do any mutations. I could make a better algorithm!
 
-        // 600ns
-        let (width, height) = input
-            .0
-            .iter()
-            .fold((0, 0), |(w, h), &(x, y)| (w.max(x + 1), h.max(y + 1)));
-
-        // 1.5us
-        let mut field = FoldableField2D::new(width, height, false);
-
-        // 200us
-        input
-            .0
-            .iter()
-            .for_each(|&(x, y)| field.field[(x, y)] = true);
-
-        // 583us
-        match input.1[0] {
-            Fold::AlongX(x) => field.fold_vertical(x),
-            Fold::AlongY(y) => field.fold_horizontal(y),
+        let fold = input.1[0];
+        let mut hashmap = rustc_hash::FxHashSet::default();
+        hashmap.reserve(input.0.len());
+        match fold {
+            Fold::AlongX(fold_idx) => input.0.iter().for_each(|&(x, y)| {
+                hashmap.insert((if x > fold_idx { fold_idx * 2 - x } else { x }, y));
+            }),
+            Fold::AlongY(fold_idx) => input.0.iter().for_each(|&(x, y)| {
+                hashmap.insert((x, if y > fold_idx { fold_idx * 2 - y } else { y }));
+            }),
         };
 
-        // 262us
-        field.count()
+        hashmap.len()
     }
 
     fn solve_2(input: &Self::Input) -> Self::Output {
