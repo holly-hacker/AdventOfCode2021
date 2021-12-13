@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
 cfg-if = "1.0.0"
+either = "1.6.1"
 rustc-hash = "1.1.0"
 tinyvec = { version = "1.5.1", features = ["rustc_1_40"] }
 

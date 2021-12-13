@@ -219,6 +219,7 @@ dependencies = [
  "aoc-lib",
  "cfg-if",
  "criterion",
+ "either",
  "rustc-hash",
  "tinyvec",
 ]
