@@ -1,6 +1,8 @@
 pub use paste::paste;
 use std::fmt::Display;
 
+pub mod utils;
+
 #[macro_export]
 macro_rules! aoc_setup {
     ($type:ident $(, $test_type:ident $index:literal: $test_result:expr)*) => {

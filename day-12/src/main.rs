@@ -87,7 +87,7 @@ fn walk_edge_1(graph: &Graph<Node, (), Undirected>, path: ArrayVec<[NodeIndex; 1
         .filter(|&n| Node::from(n).can_visit_multiple_times() || !path.contains(&n));
 
     neighbours.fold(0, |acc, neighbour| {
-        let mut new_path = path.clone(); // TODO: dont need to clone if I properly dequeue
+        let mut new_path = path;
         new_path.push(neighbour);
 
         acc + if neighbour == Node::END.into() {
@@ -117,7 +117,7 @@ fn walk_edge_2(
         let duplicate_used =
             duplicate_used || (!neighbour.can_visit_multiple_times() && path.contains(&neighbour));
 
-        let mut new_path = path.clone(); // TODO: dont need to clone if I properly dequeue
+        let mut new_path = path;
         new_path.push(neighbour);
 
         acc + if neighbour == Node::END.into() {
