@@ -220,6 +220,7 @@ dependencies = [
  "cfg-if",
  "criterion",
  "rustc-hash",
+ "tinyvec",
 ]
 
 [[package]]
