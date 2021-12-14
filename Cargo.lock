@@ -225,6 +225,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "day-14"
+version = "0.1.0"
+dependencies = [
+ "aoc-lib",
+ "tinyvec",
+]
+
+[[package]]
 name = "day-2"
 version = "0.1.0"
 dependencies = [
