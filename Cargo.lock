@@ -229,7 +229,16 @@ name = "day-14"
 version = "0.1.0"
 dependencies = [
  "aoc-lib",
+ "criterion",
+ "rustc-hash",
  "tinyvec",
+]
+
+[[package]]
+name = "day-15"
+version = "0.1.0"
+dependencies = [
+ "aoc-lib",
 ]
 
 [[package]]

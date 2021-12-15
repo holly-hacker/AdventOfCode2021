@@ -10,14 +10,7 @@ impl AdventOfCode for Day9 {
     type Output = usize;
 
     fn parse_input(s: &str) -> Self::Input {
-        Field2D {
-            data: s
-                .lines()
-                .map(|l| l.chars().map(|c| (c as u8) - b'0'))
-                .flatten()
-                .collect(),
-            stride: s.lines().next().unwrap().len(),
-        }
+        Field2D::from_str(s)
     }
 
     fn solve_1(input: &Self::Input) -> Self::Output {

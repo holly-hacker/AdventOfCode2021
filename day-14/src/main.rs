@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Add};
+use std::ops::Add;
 
 use aoc_lib::*;
 use tinyvec::ArrayVec;
@@ -7,7 +7,7 @@ aoc_setup!(Day14, sample 1: 1588, sample 2: 2188189693529, part 1: 2967, part 2:
 
 // TODO: could be stack-based hashmap. may need to make size u32
 #[derive(Default, Clone, Debug)]
-struct NumSet([usize; 26]);
+struct NumSet([u64; 26]);
 
 impl NumSet {
     pub fn increment(&mut self, i: u8) {
@@ -81,13 +81,10 @@ impl AdventOfCode for Day14 {
 }
 
 fn run(input: &InputData, count: usize) -> usize {
-    type Iteration = HashMap<(u8, u8), NumSet>; // TODO: also stack-based maybe? would be pretty large
+    type Iteration = rustc_hash::FxHashMap<(u8, u8), NumSet>; // TODO: also stack-based maybe? would be pretty large
 
-    fn gen_iteration(pairs: &[((u8, u8), u8)], old: &Iteration) -> Iteration {
-        let mut iteration = HashMap::new();
+    fn gen_iteration(pairs: &[((u8, u8), u8)], old: &Iteration, iteration: &mut Iteration) {
         for &(from, to) in pairs {
-            // iteration.insert(from, [0; 26]);
-
             let (target1, target2) = ((from.0, to), (to, from.1));
 
             let mut new_set = match (old.get(&target1), old.get(&target2)) {
@@ -99,10 +96,16 @@ fn run(input: &InputData, count: usize) -> usize {
             new_set.increment(to);
             iteration.insert(from, new_set);
         }
-        iteration
     }
 
-    let final_map = (0..count).fold(Iteration::new(), |old, _| gen_iteration(&input.1, &old));
+    let (mut old_iteration, mut new_iteration) = (Iteration::default(), Iteration::default());
+
+    for _ in 0..count {
+        std::mem::swap(&mut old_iteration, &mut new_iteration);
+        gen_iteration(&input.1, &old_iteration, &mut new_iteration);
+    }
+
+    let final_map = new_iteration;
 
     let mut final_set: NumSet = input
         .0
@@ -117,9 +120,9 @@ fn run(input: &InputData, count: usize) -> usize {
         .0
         .iter()
         .filter(|&&x| x != 0)
-        .fold((usize::MAX, usize::MIN), |(min, max), &x| {
+        .fold((u64::MAX, u64::MIN), |(min, max), &x| {
             (min.min(x), max.max(x))
         });
 
-    max - min
+    (max - min) as usize
 }
