@@ -1,39 +1,31 @@
+use std::{cmp::Ordering, collections::BinaryHeap};
+
 use aoc_lib::{utils::Field2D, *};
 
-aoc_setup!(Day1, sample 1: 40, sample 2: 315, part 1: 562);
+aoc_setup!(Day15, sample 1: 40, sample 2: 315, part 1: 562, part 2: 2874);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct DijkstraPair {
-    distance: usize,
-    last_index: usize,
-    solved: bool,
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct State {
+    node: usize,
+    cost: usize,
 }
 
-impl Default for DijkstraPair {
-    fn default() -> Self {
-        Self {
-            distance: usize::MAX,
-            last_index: 0,
-            solved: false,
-        }
+// Manually implement Ord so we get a min-heap instead of a max-heap
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.cost.cmp(&self.cost)
     }
 }
 
-impl PartialOrd for DijkstraPair {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.distance.partial_cmp(&other.distance)
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
-impl Ord for DijkstraPair {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.distance.cmp(&other.distance)
-    }
-}
+pub struct Day15;
 
-pub struct Day1;
-
-impl AdventOfCode for Day1 {
+impl AdventOfCode for Day15 {
     type Input = Field2D<u8>;
     type Output = usize;
 
@@ -65,73 +57,44 @@ impl AdventOfCode for Day1 {
     }
 }
 
+// ripped off from rosettacode. I'm not spending my entire evening figuring out why dijkstra is slow without a binary heap
 fn dijkstra(input: &Field2D<u8>) -> usize {
-    let mut distances = vec![DijkstraPair::default(); input.data.len()];
+    let mut dist = vec![(usize::MAX, None); input.data.len()];
+    let mut heap = BinaryHeap::new();
+    let end = input.data.len() - 1;
 
-    distances[0] = DijkstraPair {
-        distance: 0,
-        last_index: 0,
-        solved: true,
-    };
+    dist[0] = (0, None);
 
-    // fill in original neighbours
-    input
-        .neighbour_indices(0)
-        .into_iter()
-        .flatten()
-        .for_each(|neighbour_idx| {
-            distances[neighbour_idx] = DijkstraPair {
-                distance: input.data[neighbour_idx] as usize,
-                last_index: 0,
-                solved: false,
+    heap.push(State { node: 0, cost: 0 });
+
+    while let Some(State { node, cost }) = heap.pop() {
+        if node == end {
+            let mut path = Vec::with_capacity(dist.len() / 2);
+            let mut current_dist = dist[end];
+            path.push(end);
+            while let Some(prev) = current_dist.1 {
+                path.push(prev);
+                current_dist = dist[prev];
             }
-        });
-
-    loop {
-        // find lowest cost
-        let (cheapest_idx, cheapest) =
-            distances
-                .iter()
-                .enumerate()
-                .fold((0, DijkstraPair::default()), |acc, i| {
-                    if !i.1.solved && i.1.distance < acc.1.distance {
-                        (i.0, *i.1)
-                    } else {
-                        acc
-                    }
-                });
-
-        // if lowest_cost is end, we're done
-        if cheapest_idx == input.data.len() - 1 {
-            return cheapest.distance;
+            path.reverse();
+            return cost;
         }
 
-        // mark as solved, ie. we found the shortest path to it
-        distances[cheapest_idx].solved = true;
-
-        // loop through unsolved neighbours where last node is lowest_cost_idx, and update their cost if lower
-        input
-            .neighbour_indices(cheapest_idx)
-            .into_iter()
-            .flatten()
-            .for_each(|idx| {
-                // cannot be inside filter block because of borrow checker, boo!
-                if distances[idx].solved {
-                    return;
-                }
-
-                let cur = distances[idx];
-                let cur_cost = input.data[idx] as usize;
-
-                // check if new path (through `cheapest`) is cheaper
-                let proposed_distance = cheapest.distance + cur_cost;
-                if proposed_distance < cur.distance {
-                    distances[idx] = DijkstraPair {
-                        distance: proposed_distance,
-                        last_index: cheapest_idx,
-                        solved: false,
-                    };
-                }
-            });
+        if cost > dist[node].0 {
+            continue;
+        }
+        for edge in input.neighbour_indices(node).into_iter().flatten() {
+            let new_cost = input.data[edge] as usize;
+            let next = State {
+                node: edge,
+                cost: cost + new_cost,
+            };
+            if next.cost < dist[next.node].0 {
+                dist[next.node] = (next.cost, Some(node));
+                heap.push(next);
+            }
+        }
     }
+
+    unreachable!()
 }
