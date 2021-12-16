@@ -247,6 +247,7 @@ name = "day-16"
 version = "0.1.0"
 dependencies = [
  "aoc-lib",
+ "bumpalo",
  "criterion",
  "hex",
 ]

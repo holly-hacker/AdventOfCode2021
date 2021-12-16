@@ -1,17 +1,21 @@
 use aoc_lib::*;
+use bumpalo::{
+    collections::{CollectIn, Vec},
+    Bump,
+};
 
 aoc_setup!(Day16, sample 1: 6, part 1: 967, part 2: 12883091136209);
 
 #[derive(Debug)]
-struct BitIterator<'a> {
+struct BitReader<'a> {
     data: &'a [u8],
     index: usize,
     bit_index: usize,
 }
 
-impl<'a> BitIterator<'a> {
+impl<'a> BitReader<'a> {
     pub fn from(data: &'a [u8]) -> Self {
-        BitIterator {
+        BitReader {
             data,
             index: 0,
             bit_index: 0,
@@ -22,12 +26,19 @@ impl<'a> BitIterator<'a> {
         self.index * 8 + self.bit_index
     }
 
+    pub fn read_bit(&mut self) -> bool {
+        let mask = 1 << (7 - self.bit_index);
+        let bit = self.data[self.index] & mask != 0;
+        self.increment_count();
+        bit
+    }
+
     pub fn read_bits(&mut self, count: usize) -> u64 {
         let mut bits = 0;
 
         for _ in 0..count {
             bits <<= 1;
-            bits |= self.next().unwrap() as u64;
+            bits |= self.read_bit() as u64;
         }
 
         bits
@@ -37,7 +48,7 @@ impl<'a> BitIterator<'a> {
         let mut total = 0;
 
         loop {
-            let next = self.next().unwrap();
+            let next = self.read_bit();
             let data = self.read_bits(4);
 
             total <<= 4;
@@ -50,38 +61,27 @@ impl<'a> BitIterator<'a> {
 
         total
     }
-}
 
-impl<'a> Iterator for BitIterator<'a> {
-    type Item = bool;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.data.len() {
-            return None;
-        }
-        let mask = 1 << (7 - self.bit_index);
-        let bit = self.data[self.index] & mask != 0;
-
+    fn increment_count(&mut self) {
         self.bit_index += 1;
+
         if self.bit_index == 8 {
             self.bit_index = 0;
             self.index += 1;
         }
-
-        Some(bit)
     }
 }
 
 #[derive(Debug)]
-struct Packet {
-    pub version: usize,
-    pub data: PacketData,
+struct Packet<'bump> {
+    pub version: u8,
+    pub data: PacketData<'bump>,
 }
 
-impl Packet {
-    pub fn parse(iter: &mut BitIterator<'_>) -> Self {
-        let version = iter.read_bits(3) as usize;
-        let data = PacketData::parse(iter);
+impl<'a> Packet<'a> {
+    pub fn parse(data: &mut BitReader<'a>, bump: &'a Bump) -> Self {
+        let version = data.read_bits(3) as u8;
+        let data = PacketData::parse(data, bump);
 
         Self { version, data }
     }
@@ -96,35 +96,38 @@ impl Packet {
 }
 
 #[derive(Debug)]
-enum PacketData {
-    Literal(u64),                 // id 4
-    Operator(usize, Vec<Packet>), // any other id
+enum PacketData<'a> {
+    Literal(u64),                      // id 4
+    Operator(u8, Vec<'a, Packet<'a>>), // any other id
 }
 
-impl PacketData {
-    pub fn parse(data: &mut BitIterator<'_>) -> Self {
-        match data.read_bits(3) as usize {
+impl<'a> PacketData<'a> {
+    pub fn parse(data: &mut BitReader<'a>, bump: &'a Bump) -> Self {
+        match data.read_bits(3) as u8 {
             4 => PacketData::Literal(data.read_uleb16()),
             i => {
                 // operator packet
-                let length_type_id = data.read_bits(1);
+                let length_type_id = data.read_bit();
 
                 let sub_packets = match length_type_id {
-                    0 => {
+                    false => {
                         let bit_count = data.read_bits(15) as usize;
                         let bit_start = data.bit_index();
 
-                        let mut sub_packets = vec![];
+                        // borrowchecker complains if I use take_while on infinite iterator
+                        let mut sub_packets = Vec::new_in(bump);
                         while data.bit_index() - bit_start != bit_count {
-                            sub_packets.push(Packet::parse(data));
+                            sub_packets.push(Packet::parse(data, bump));
                         }
                         sub_packets
                     }
-                    1 => {
+                    true => {
                         let count = data.read_bits(11);
-                        (0..count).map(|_| Packet::parse(data)).collect()
+
+                        (0..count)
+                            .map(|_| Packet::parse(data, bump))
+                            .collect_in::<Vec<_>>(bump)
                     }
-                    i => panic!("unexpected length type id {}", i),
                 };
 
                 PacketData::Operator(i, sub_packets)
@@ -159,7 +162,7 @@ impl PacketData {
 pub struct Day16;
 
 impl AdventOfCode for Day16 {
-    type Input = Vec<u8>;
+    type Input = std::vec::Vec<u8>;
     type Output = u64;
 
     fn parse_input(s: &str) -> Self::Input {
@@ -167,14 +170,16 @@ impl AdventOfCode for Day16 {
     }
 
     fn solve_1(input: &Self::Input) -> Self::Output {
-        let mut iter = BitIterator::from(input);
-        let data = Packet::parse(&mut iter);
+        let bump = Bump::new();
+        let mut iter = BitReader::from(input);
+        let data = Packet::parse(&mut iter, &bump);
         data.sum_versions() as u64
     }
 
     fn solve_2(input: &Self::Input) -> Self::Output {
-        let mut iter = BitIterator::from(input);
-        let data = Packet::parse(&mut iter);
+        let bump = Bump::new();
+        let mut iter = BitReader::from(input);
+        let data = Packet::parse(&mut iter, &bump);
         data.evaluate()
     }
 }

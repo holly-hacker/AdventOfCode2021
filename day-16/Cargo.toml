@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
+bumpalo = {version = "3.8.0", features = ["boxed", "collections"]}
 hex = "0.4.3"
 
 [dev-dependencies]
