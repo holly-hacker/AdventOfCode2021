@@ -16,7 +16,7 @@ impl Digit {
         debug_assert!(input.len() <= 7);
 
         let x = input.as_bytes().iter().fold(0u8, |ret, &c| {
-            debug_assert!(c >= b'a' && c <= b'g');
+            debug_assert!((b'a'..=b'g').contains(&c));
             ret | 1 << (7 + c - b'g')
         });
 

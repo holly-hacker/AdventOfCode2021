@@ -106,8 +106,7 @@ impl AdventOfCode for Day17 {
         let min_x_velocity = inverse_triangle_number(
             INVERSE_TRIANGLE_LOOKUP
                 .into_iter()
-                .filter(|&x| x >= input.x() as usize)
-                .next()
+                .find(|&x| x >= input.x() as usize)
                 .unwrap(),
         ) as usize;
         let max_x_velocity = input.x2() as usize;
@@ -120,11 +119,9 @@ impl AdventOfCode for Day17 {
                     .filter(|&x_velocity| {
                         y_step_range.clone().any(|step| {
                             // try to find valid velocity for this step
-                            let success = input
+                            input
                                 .x_range()
-                                .contains(&(get_x_position_at_step(x_velocity, step) as isize));
-
-                            success
+                                .contains(&(get_x_position_at_step(x_velocity, step) as isize))
                         })
                     })
                     .count()

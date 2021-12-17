@@ -17,7 +17,7 @@ impl AdventOfCode for Day7 {
         let median = {
             // TODO: there has to be a faster way to get the median!
             let mut sorted = input.clone();
-            sorted.sort();
+            sorted.sort_unstable();
             sorted[sorted.len() / 2]
         };
 

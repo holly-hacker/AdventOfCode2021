@@ -10,7 +10,7 @@ impl AdventOfCode for Day9 {
     type Output = usize;
 
     fn parse_input(s: &str) -> Self::Input {
-        Field2D::from_str(s)
+        Field2D::parse(s)
     }
 
     fn solve_1(input: &Self::Input) -> Self::Output {
@@ -101,7 +101,7 @@ fn flood_fill_recursive(
     field
         .neighbour_indices(idx)
         .into_iter()
-        .filter_map(|x| x)
+        .flatten()
         .for_each(|idx| size = flood_fill_recursive(field, target, num, idx, size));
 
     size

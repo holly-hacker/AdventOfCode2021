@@ -1,4 +1,7 @@
-use std::ops::{Index, IndexMut};
+use std::{
+    fmt::{Display, Write},
+    ops::{Index, IndexMut},
+};
 
 #[derive(Debug)]
 pub struct Field2D<T> {
@@ -48,7 +51,7 @@ where
 }
 
 impl Field2D<u8> {
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         Field2D {
             data: s
                 .lines()
@@ -58,16 +61,18 @@ impl Field2D<u8> {
             stride: s.lines().next().unwrap().len(),
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
-        let mut s = String::new();
+impl Display for Field2D<u8> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for y in 0..self.height() {
             for x in 0..self.width() {
-                s.push((b'0' + self[(x, y)]) as char);
+                f.write_char((b'0' + self[(x, y)]) as char)?;
             }
-            s.push('\n');
+            writeln!(f)?;
         }
-        s
+
+        Ok(())
     }
 }
 

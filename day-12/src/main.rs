@@ -74,6 +74,7 @@ impl AdventOfCode for Day12 {
         walk_edge_1(input, array_vec!(Node::START.into()))
     }
 
+    #[allow(clippy::useless_conversion)] // clippy bug?
     fn solve_2(input: &Self::Input) -> Self::Output {
         walk_edge_2(input, array_vec!(Node::START.into()), false)
     }
@@ -108,10 +109,8 @@ fn walk_edge_2(
     let neighbours = graph
         .neighbors(last_node.into())
         .map(|n| n.into())
-        .filter(|&n| n != last_node && n != Node::START)
-        .filter(|&n| {
-            Node::from(n).can_visit_multiple_times() || !duplicate_used || !path.contains(&n)
-        });
+        .filter(|&n: &Node| n != last_node && n != Node::START)
+        .filter(|&n| n.can_visit_multiple_times() || !duplicate_used || !path.contains(&n));
 
     neighbours.fold(0, |acc, neighbour| {
         let duplicate_used =
@@ -120,7 +119,7 @@ fn walk_edge_2(
         let mut new_path = path;
         new_path.push(neighbour);
 
-        acc + if neighbour == Node::END.into() {
+        acc + if neighbour == Node::END {
             // println!("{:?}", new_path);
             1
         } else {

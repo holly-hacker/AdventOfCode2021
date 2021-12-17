@@ -30,7 +30,7 @@ impl AdventOfCode for Day15 {
     type Output = usize;
 
     fn parse_input(s: &str) -> Self::Input {
-        Field2D::from_str(s)
+        Field2D::parse(s)
     }
 
     fn solve_1(input: &Self::Input) -> Self::Output {

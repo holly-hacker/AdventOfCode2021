@@ -24,6 +24,7 @@ impl Board {
             .sum()
     }
 
+    #[allow(clippy::unusual_byte_groupings)]
     fn is_solved(mask: u32) -> bool {
         const INDICES: [u32; 10] = [
             // horizontal
@@ -51,7 +52,7 @@ impl AdventOfCode for Day4 {
     type Output = usize;
 
     fn parse_input(s: &str) -> Self::Input {
-        let mut iter = s.lines().filter(|line| line.len() > 0);
+        let mut iter = s.lines().filter(|line| !line.is_empty());
 
         let x = iter
             .next()
@@ -67,7 +68,7 @@ impl AdventOfCode for Day4 {
                 let mut numbers = [0; 5 * 5];
                 for (i, n) in chunk.into_iter().enumerate() {
                     n.split(' ')
-                        .filter(|x| x.len() > 0)
+                        .filter(|x| !x.is_empty())
                         .enumerate()
                         .for_each(|(j, s)| {
                             numbers[i * 5 + j] = s.parse::<u8>().unwrap();
@@ -125,18 +126,18 @@ impl AdventOfCode for Day4 {
                         let solved_ref = solved_list.index_mut(i / (usize::BITS as usize));
                         let solved_bit_idx = i % (usize::BITS as usize);
 
-                        if ((*solved_ref) & (1 << solved_bit_idx)) == 0 {
-                            if Board::is_solved(solve_mask[i]) {
-                                last_num = num as usize;
-                                last_solved = i;
-                                last_mask = solve_mask[last_solved];
-                                *solved_ref |= 1 << solved_bit_idx;
-                                solved_count += 1;
+                        if ((*solved_ref) & (1 << solved_bit_idx)) == 0
+                            && Board::is_solved(solve_mask[i])
+                        {
+                            last_num = num as usize;
+                            last_solved = i;
+                            last_mask = solve_mask[last_solved];
+                            *solved_ref |= 1 << solved_bit_idx;
+                            solved_count += 1;
 
-                                // check if everything is solved
-                                if solved_count == input.1.len() {
-                                    return Some(());
-                                }
+                            // check if everything is solved
+                            if solved_count == input.1.len() {
+                                return Some(());
                             }
                         }
 

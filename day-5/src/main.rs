@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)] // TODO: fix
+
 use aoc_lib::*;
 
 aoc_setup!(Day5, sample 1: 5, sample 2: 12, part 1: 4826, part 2: 16793);

@@ -257,6 +257,7 @@ name = "day-17"
 version = "0.1.0"
 dependencies = [
  "aoc-lib",
+ "criterion",
 ]
 
 [[package]]

@@ -33,24 +33,20 @@ impl AdventOfCode for Day2 {
     }
 
     fn solve_1(input: &Self::Input) -> Self::Output {
-        let sub = input
-            .into_iter()
-            .fold((0, 0), |sub, &(dir, dist)| match dir {
-                Direction::Forward => (sub.0 + dist, sub.1),
-                Direction::Down => (sub.0, sub.1 + dist),
-                Direction::Up => (sub.0, sub.1 - dist),
-            });
+        let sub = input.iter().fold((0, 0), |sub, &(dir, dist)| match dir {
+            Direction::Forward => (sub.0 + dist, sub.1),
+            Direction::Down => (sub.0, sub.1 + dist),
+            Direction::Up => (sub.0, sub.1 - dist),
+        });
         sub.0 * sub.1
     }
 
     fn solve_2(input: &Self::Input) -> Self::Output {
-        let sub = input
-            .into_iter()
-            .fold((0, 0, 0), |sub, &(dir, dist)| match dir {
-                Direction::Forward => (sub.0 + dist, sub.1 + sub.2 * dist, sub.2),
-                Direction::Down => (sub.0, sub.1, sub.2 + dist),
-                Direction::Up => (sub.0, sub.1, sub.2 - dist),
-            });
+        let sub = input.iter().fold((0, 0, 0), |sub, &(dir, dist)| match dir {
+            Direction::Forward => (sub.0 + dist, sub.1 + sub.2 * dist, sub.2),
+            Direction::Down => (sub.0, sub.1, sub.2 + dist),
+            Direction::Up => (sub.0, sub.1, sub.2 - dist),
+        });
         sub.0 * sub.1
     }
 }
