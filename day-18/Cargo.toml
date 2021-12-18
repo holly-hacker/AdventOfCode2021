@@ -7,11 +7,11 @@ edition = "2021"
 
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
-tinyvec = { version = "1.5.1", features = ["rustc_1_55"] }
+tinyvec = { version = "1.5.1", features = ["rustc_1_55", "alloc"] }
 
 [dev-dependencies]
 criterion = "0.3"
 
-# [[bench]]
-# name = "bench"
-# harness = false
+[[bench]]
+name = "bench"
+harness = false

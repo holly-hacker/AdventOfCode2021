@@ -2,7 +2,7 @@ use std::{fmt::Display, ops::Add};
 
 use aoc_lib::*;
 
-aoc_setup!(Day18, sample 1: 4140, part 1: 4184, sample 2: 3993);
+aoc_setup!(Day18, sample 1: 4140, sample 2: 3993, part 1: 4184, part 2: 4731);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SnailfishNumber(Vec<Token>); // TODO: try using tinyvec
@@ -13,6 +13,7 @@ impl SnailfishNumber {
             line.chars()
                 .filter_map(|c| match c {
                     '[' => Some(Token::Open),
+                    ']' => Some(Token::Closed),
                     '0'..='9' => Some(Token::Number(c.to_digit(10).unwrap() as u8)),
                     _ => None,
                 })
@@ -25,9 +26,6 @@ impl SnailfishNumber {
     }
 
     pub fn reduce_once(&mut self) -> bool {
-        // each value in this stack indicates the index in the pair
-        let mut stack = tinyvec::ArrayVec::<[u8; 16]>::new();
-
         #[derive(Debug)]
         enum Action {
             Explode,
@@ -35,41 +33,27 @@ impl SnailfishNumber {
         }
 
         let mut action = None;
+        let mut depth = 0;
 
-        'outer: for (i, &token) in self.0.iter().enumerate() {
+        for (i, &token) in self.0.iter().enumerate() {
             match token {
                 Token::Open => {
-                    stack.push(0);
+                    depth += 1;
                 }
                 Token::Number(n) => {
-                    if stack.len() > 4 {
+                    // TODO: can do multiple explodes in 1 iteration, but it's not trivial
+                    if depth > 4 {
                         // explode!
                         action = Some((Action::Explode, i));
                         break;
                     }
 
-                    if n > 9 {
-                        if action.is_none() {
-                            action = Some((Action::Split, i));
-                        }
+                    if n > 9 && action.is_none() {
+                        action = Some((Action::Split, i));
                     }
-
-                    let stack_top = stack.len() - 1; // fucking borrowchecker
-                    stack[stack_top] += 1;
-
-                    // pop the pairs we're leaving
-                    while stack[stack.len() - 1] >= 2 {
-                        debug_assert!(stack[stack.len() - 1] == 2);
-                        stack.pop();
-
-                        // TODO: this condition doesnt make sense, it shouldnt be needed
-                        if stack.len() != 0 {
-                            let stack_top = stack.len() - 1; // fucking borrowchecker
-                            stack[stack_top] += 1;
-                        } else {
-                            break 'outer;
-                        }
-                    }
+                }
+                Token::Closed => {
+                    depth -= 1;
                 }
             }
         }
@@ -84,7 +68,7 @@ impl SnailfishNumber {
                 true
             }
             None => {
-                debug_assert_eq!(stack.len(), 0);
+                debug_assert_eq!(depth, 0);
                 false
             }
         }
@@ -92,12 +76,17 @@ impl SnailfishNumber {
 
     fn explode_at(&mut self, index: usize) {
         debug_assert!(self.0[index] != Token::Open);
+        debug_assert!(self.0[index] != Token::Closed);
 
         let (left, right) = (
             self.0[index].unwrap_number(),
             self.0[index + 1].unwrap_number(),
         );
+
+        // remove second number
         self.0.remove(index + 1);
+
+        // replace first number with 0
         self.0[index] = Token::Number(0);
 
         for i in (0..index).rev() {
@@ -113,6 +102,9 @@ impl SnailfishNumber {
                 break;
             }
         }
+
+        // remove the open and close tokens
+        self.0.remove(index + 1);
         self.0.remove(index - 1);
     }
 
@@ -123,11 +115,12 @@ impl SnailfishNumber {
         let (left, right) = if value % 2 == 0 {
             (value / 2, value / 2)
         } else {
-            (value / 2 + 1, value / 2)
+            (value / 2, value / 2 + 1)
         };
-        self.0.insert(index, Token::Open);
-        self.0[index + 1] = Token::Number(left);
+        self.0.insert(index + 1, Token::Closed);
         self.0.insert(index + 1, Token::Number(right));
+        self.0[index] = Token::Number(left);
+        self.0.insert(index, Token::Open);
     }
 
     pub fn magnitude(&self) -> usize {
@@ -141,9 +134,10 @@ impl SnailfishNumber {
             Token::Open => {
                 let (remainder, lhs) = Self::magnitude_internal(&tokens[1..]);
                 let (remainder, rhs) = Self::magnitude_internal(remainder);
-                (remainder, lhs * 3 + rhs * 2)
+                (&remainder[1..], lhs * 3 + rhs * 2)
             }
             Token::Number(a) => (&tokens[1..], a as usize),
+            Token::Closed => panic!(),
         }
     }
 }
@@ -151,8 +145,12 @@ impl SnailfishNumber {
 impl Add for SnailfishNumber {
     type Output = Self;
 
-    fn add(self, rhs: Self) -> Self::Output {
-        &self + &rhs
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self.0.extend(rhs.0);
+        self.0.extend([Token::Closed, Token::Open]);
+        self.0.rotate_right(1);
+        self.reduce();
+        self
     }
 }
 
@@ -160,9 +158,11 @@ impl Add for &SnailfishNumber {
     type Output = SnailfishNumber;
 
     fn add(self, rhs: Self) -> Self::Output {
-        let mut new_num_data = vec![Token::Open];
-        new_num_data.extend(self.0.clone());
-        new_num_data.extend(rhs.0.clone());
+        let mut new_num_data = Vec::with_capacity(2 + self.0.len() + rhs.0.len());
+        new_num_data.push(Token::Open);
+        new_num_data.extend_from_slice(&self.0);
+        new_num_data.extend_from_slice(&rhs.0);
+        new_num_data.push(Token::Closed);
         let mut num = SnailfishNumber(new_num_data);
         num.reduce();
         num
@@ -172,38 +172,18 @@ impl Add for &SnailfishNumber {
 impl Display for SnailfishNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // using stack-based method from `reduce` for ability to place ]
-        let mut stack = tinyvec::ArrayVec::<[u8; 16]>::new();
         for token in &self.0 {
             match token {
                 Token::Open => {
-                    stack.push(0);
                     write!(f, "[")?;
                 }
                 Token::Number(n) => {
-                    let stack_top = stack.len() - 1; // fucking borrowchecker
-                    stack[stack_top] += 1;
-
-                    write!(f, "{}", n)?;
-
-                    // pop the pairs we're leaving
-                    while stack[stack.len() - 1] >= 2 {
-                        debug_assert!(stack[stack.len() - 1] == 2);
-                        stack.pop();
-                        write!(f, "]")?;
-
-                        // TODO: this condition doesnt make sense, it shouldnt be needed
-                        if stack.len() != 0 {
-                            let stack_top = stack.len() - 1; // fucking borrowchecker
-                            stack[stack_top] += 1;
-                        } else {
-                            break;
-                        }
-                    }
+                    write!(f, "{},", n)?;
+                }
+                Token::Closed => {
+                    write!(f, "]")?;
                 }
             };
-            if !stack.is_empty() && stack[stack.len() - 1] == 1 {
-                write!(f, ",")?;
-            }
         }
         Ok(())
     }
@@ -213,7 +193,7 @@ impl Display for SnailfishNumber {
 pub enum Token {
     Open,
     Number(u8),
-    // Closed is not needed
+    Closed,
 }
 
 impl Token {
@@ -222,6 +202,12 @@ impl Token {
             Token::Number(n) => n,
             _ => panic!("unwrap_number called on non-number"),
         }
+    }
+}
+
+impl Default for Token {
+    fn default() -> Self {
+        Token::Open
     }
 }
 
@@ -333,7 +319,7 @@ reduce_test!(
 
 #[test]
 fn test_explode_at() {
-    let mut original = SnailfishNumber::parse("[1, [[2, 3], 4]");
+    let mut original = SnailfishNumber::parse("[1, [[2, 3], 4]]");
     original.explode_at(4);
     assert_eq!(original, SnailfishNumber::parse("[3, [0, 7]]"));
 }
@@ -342,14 +328,14 @@ fn test_explode_at() {
 fn test_split_at_even() {
     let mut original = SnailfishNumber::parse("[1, [4, 4]]");
     original.split_at(3);
-    assert_eq!(original, SnailfishNumber::parse("[1, [[2, 2], 4]"));
+    assert_eq!(original, SnailfishNumber::parse("[1, [[2, 2], 4]]"));
 }
 
 #[test]
 fn test_split_at_odd() {
     let mut original = SnailfishNumber::parse("[1, [3, 4]]");
     original.split_at(3);
-    assert_eq!(original, SnailfishNumber::parse("[1, [[1, 2], 4]"));
+    assert_eq!(original, SnailfishNumber::parse("[1, [[1, 2], 4]]"));
 }
 
 #[test]
