@@ -1,9 +1,8 @@
-use std::{
-    collections::{HashMap, HashSet},
-    ops::{Add, Neg, Sub},
-};
+use std::ops::{Add, Neg, Sub};
 
 use aoc_lib::*;
+use rustc_hash::{FxHashMap, FxHashSet};
+use tinyvec::ArrayVec;
 
 aoc_setup!(Day19, sample 1: 79, sample 2: 3621, part 1: 398, part 2: 10965);
 
@@ -230,10 +229,13 @@ impl AdventOfCode for Day19 {
 
     fn solve_2(input: &Self::Input) -> Self::Output {
         let scanners = calculate_positions(input).0;
+
         let positions = scanners
             .into_iter()
-            .map(|(_, (pos, _))| pos)
+            .flatten()
+            .map(|(pos, _)| pos)
             .collect::<Vec<_>>();
+
         (0..positions.len())
             .flat_map(|a| (a + 1..positions.len()).map(move |b| (a, b)))
             .map(|(a, b)| positions[a].manhattan_distance(&positions[b]))
@@ -242,56 +244,48 @@ impl AdventOfCode for Day19 {
     }
 }
 
-fn calculate_positions(
-    input: &[Vec<Vector3>],
-) -> (HashMap<usize, (Vector3, FacingDirection)>, HashSet<Vector3>) {
+type CalculatePositionsTuple = (
+    ArrayVec<[Option<(Vector3, FacingDirection)>; 33]>,
+    FxHashSet<Vector3>,
+);
+
+fn calculate_positions(input: &[Vec<Vector3>]) -> CalculatePositionsTuple {
     // TODO: can just be [Option<FacingDirection>; 32] or tiny_vec::ArrayVec<[Option<FacingDirection>; 32]>
-    let mut directions = HashMap::new();
-    directions.insert(0, (Vector3::default(), FacingDirection::default()));
+    let mut scanners = ArrayVec::<[Option<(Vector3, FacingDirection)>; 33]>::new();
+    scanners.insert(0, Some((Vector3::default(), FacingDirection::default())));
+    for _ in 1..input.len() {
+        scanners.push(None);
+    }
 
     // create a collection with all known locations
-    let mut known_locations = HashSet::new();
-    for &probe in &input[0] {
-        known_locations.insert(probe);
+    let mut beacons = FxHashSet::default();
+    for &beacon in &input[0] {
+        beacons.insert(beacon);
     }
 
     let mut iteration_count = 0;
-    while directions.len() != input.len() {
+    let mut reusable_hashmap = FxHashMap::default();
+    while !scanners.iter().all(|i| i.is_some()) {
         for (i, list) in input.iter().enumerate() {
-            if directions.contains_key(&i) {
+            if scanners[i].is_some() {
                 continue;
             }
 
             // check if the list we're given matches at least 12 nodes in the known locations
-            let valid_directions = FacingDirection::iter_all()
-                .filter_map(|direction| {
-                    compare_sets(&known_locations, list, direction).map(|x| (x, direction))
-                })
-                .collect::<Vec<_>>();
-            // println!("found for index {}: {}", i, valid_directions.len());
+            for direction in FacingDirection::iter_all() {
+                if let Some(found_root) =
+                    compare_sets(&beacons, list, direction, &mut reusable_hashmap)
+                {
+                    // store the position of this beacon
+                    scanners[i] = Some((found_root, direction));
 
-            if valid_directions.len() > 1 {
-                todo!("more than 1 valid direction");
-            }
+                    // store all newly found points
+                    for new_point in list {
+                        // TODO: this should be add, not sub?
+                        beacons.insert(found_root - new_point.transform_from(direction));
+                    }
 
-            if valid_directions.len() == 1 {
-                let (found_root, direction) = valid_directions[0];
-
-                // store the position of this probe
-                let previous_value = directions.insert(i, (found_root, direction));
-
-                if let Some(previous_value) = previous_value {
-                    panic!(
-                        "Found duplicate probe! {:?} vs old {:?}",
-                        (found_root, direction),
-                        previous_value
-                    );
-                }
-
-                // store all newly found points
-                for new_point in list {
-                    // TODO: wtf?? this should be add, but it only works with sub
-                    known_locations.insert(found_root - new_point.transform_from(direction));
+                    break;
                 }
             }
         }
@@ -302,52 +296,32 @@ fn calculate_positions(
         }
     }
 
-    (directions, known_locations)
+    (scanners, beacons)
 }
 
 fn compare_sets(
-    known_set: &HashSet<Vector3>,
+    known_beacons: &FxHashSet<Vector3>,
     other: &[Vector3],
     other_direction: FacingDirection,
+    found_offsets: &mut FxHashMap<Vector3, i32>,
 ) -> Option<Vector3> {
-    // TODO: can try heapless indexmap here
-    let mut found_offsets = HashMap::new();
+    // this hashmap grows to 1000-2000 items, does not fit on the heap
+    found_offsets.clear();
 
-    for &v in other {
-        // first item is inversely transformed so it turns to the true direction
-        let relative_location = v.transform_from(other_direction);
-
-        for &real_probe_location in known_set {
-            let expected_root_location = relative_location + real_probe_location;
-
+    for &real_beacon_location in known_beacons {
+        for &v in other {
+            let expected_root_location = real_beacon_location + v.transform_from(other_direction);
             let entry = found_offsets.entry(expected_root_location).or_insert(0);
             *entry += 1;
-        }
-    }
 
-    if false {
-        let found_count = found_offsets.iter().map(|(_, &c)| c).max().unwrap();
-        if found_count > 1 {
-            println!("Found matches: {}", found_count);
-        }
-        if found_count >= 12 {
-            for &v in other {
-                println!("{:?} ({:?})", v, v.transform_from(other_direction));
+            // cheeky early exit
+            if *entry >= 12 {
+                return Some(expected_root_location);
             }
         }
     }
 
-    // return first diff where 12 items match
-    // TODO: may need to also ensure that something is in range (i forgot what)
-    let mut iter = found_offsets
-        .iter()
-        .filter(|(_, &count)| count >= 12)
-        .map(|(&diff, _)| diff);
-
-    // assert there is only 1 match in debug builds
-    debug_assert!(iter.clone().count() <= 1);
-
-    iter.next()
+    None
 }
 
 #[test]

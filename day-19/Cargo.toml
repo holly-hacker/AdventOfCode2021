@@ -8,6 +8,8 @@ edition = "2021"
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
 heapless = "0.7.9"
+rustc-hash = "1.1.0"
+tinyvec = { version = "1.5.1", features = ["rustc_1_55", "alloc"] }
 
 [dev-dependencies]
 criterion = "0.3"
