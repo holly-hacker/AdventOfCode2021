@@ -1,5 +1,5 @@
 use std::{
-    fmt::{Display, Write},
+    fmt::Display,
     ops::{Index, IndexMut},
 };
 
@@ -9,16 +9,7 @@ pub struct Field2D<T> {
     pub stride: usize,
 }
 
-impl<T> Field2D<T>
-where
-    T: Copy,
-{
-    pub fn new(width: usize, height: usize, value: T) -> Self {
-        let stride = width;
-        let data = vec![value; width * height];
-        Self { data, stride }
-    }
-
+impl<T> Field2D<T> {
     pub fn width(&self) -> usize {
         self.stride
     }
@@ -50,6 +41,17 @@ where
     }
 }
 
+impl<T> Field2D<T>
+where
+    T: Copy,
+{
+    pub fn new(width: usize, height: usize, value: T) -> Self {
+        let stride = width;
+        let data = vec![value; width * height];
+        Self { data, stride }
+    }
+}
+
 impl Field2D<u8> {
     pub fn parse(s: &str) -> Self {
         Field2D {
@@ -63,11 +65,14 @@ impl Field2D<u8> {
     }
 }
 
-impl Display for Field2D<u8> {
+impl<T> Display for Field2D<T>
+where
+    T: Display + Copy,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for y in 0..self.height() {
             for x in 0..self.width() {
-                f.write_char((b'0' + self[(x, y)]) as char)?;
+                write!(f, "{}", self[(x, y)])?;
             }
             writeln!(f)?;
         }
