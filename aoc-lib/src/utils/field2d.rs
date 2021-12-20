@@ -39,6 +39,14 @@ impl<T> Field2D<T> {
             },
         ]
     }
+
+    pub fn stride_at(&self, idx: usize) -> &[T] {
+        &self.data[self.stride * idx..self.stride * (idx + 1)]
+    }
+
+    pub fn stride_at_mut(&mut self, idx: usize) -> &mut [T] {
+        &mut self.data[self.stride * idx..self.stride * (idx + 1)]
+    }
 }
 
 impl<T> Field2D<T>
