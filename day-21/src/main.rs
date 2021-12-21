@@ -1,30 +1,6 @@
 use aoc_lib::*;
 
-aoc_setup!(Day21, sample 1: 739785, sample 2: 444356092776315, part 1: 675024);
-
-struct DeterministicDie {
-    index: usize,
-    roll_count: usize,
-}
-
-impl Default for DeterministicDie {
-    fn default() -> Self {
-        Self {
-            index: 0,
-            roll_count: 0,
-        }
-    }
-}
-
-impl Iterator for DeterministicDie {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.index = self.index % 100 + 1;
-        self.roll_count += 1;
-        Some(self.index)
-    }
-}
+aoc_setup!(Day21, sample 1: 739785, sample 2: 444356092776315, part 1: 675024, part 2: 570239341223618);
 
 pub struct Day21;
 
@@ -33,33 +9,46 @@ impl AdventOfCode for Day21 {
     type Output = usize;
 
     fn parse_input(s: &str) -> Self::Input {
-        let mut lines = s.lines();
-        (
-            (lines.next().unwrap().bytes().last().unwrap() - b'0') as usize,
-            (lines.next().unwrap().bytes().last().unwrap() - b'0') as usize,
-        )
+        // input always has same length :3c
+        let b = s.as_bytes();
+        ((b[28] - b'0') as usize, (b[b.len() - 1] - b'0') as usize)
     }
 
+    // NOTE: I could precalculate a table for this since there are only 100 options
     fn solve_1(input: &Self::Input) -> Self::Output {
-        let die = &mut DeterministicDie::default();
+        let (mut die, mut die_roll_count) = (0, 0);
         let (mut score1, mut score2) = (0, 0);
         let (mut pos1, mut pos2) = input;
+        pos1 -= 1;
+        pos2 -= 1;
+
+        fn roll_die(idx: usize) -> (usize, usize) {
+            match idx {
+                98 => (99 + 100 + 1, (idx + 3) % 100),
+                99 => (100 + 1 + 2, (idx + 3) % 100),
+                _ => ((idx + 2) * 3, (idx + 3) % 100),
+            }
+        }
 
         loop {
-            let roll1 = die.take(3).sum::<usize>();
-            pos1 = (pos1 + roll1 - 1) % 10 + 1;
-            score1 += pos1;
+            let (roll1, new_die) = roll_die(die);
+            die = new_die;
+            die_roll_count += 1;
+            pos1 = (pos1 + roll1) % 10;
+            score1 += pos1 + 1;
 
             if score1 >= 1000 {
-                return score2 * die.roll_count;
+                return score2 * die_roll_count * 3; // TODO: try to just increase by 1 and mul by 3 near the end
             }
 
-            let roll2 = die.take(3).sum::<usize>();
-            pos2 = (pos2 + roll2 - 1) % 10 + 1;
-            score2 += pos2;
+            let (roll2, new_die) = roll_die(die);
+            die = new_die;
+            die_roll_count += 1;
+            pos2 = (pos2 + roll2) % 10;
+            score2 += pos2 + 1;
 
             if score2 >= 1000 {
-                return score1 * die.roll_count;
+                return score1 * die_roll_count * 3;
             }
         }
     }
@@ -99,14 +88,15 @@ impl AdventOfCode for Day21 {
                             // neither player won this round, so calculate the possibilities from this point
                             let (p1, p2) = run(new_state);
 
-                            total.0 += p1 * count1 * count2;
-                            total.1 += p2 * count1 * count2;
+                            let total_count = count1 * count2;
+                            total.0 += p1 * total_count;
+                            total.1 += p2 * total_count;
                         }
                     }
                 }
             }
 
-            return total;
+            total
         }
 
         let results = run(State {
@@ -115,8 +105,6 @@ impl AdventOfCode for Day21 {
             pos1: input.0,
             pos2: input.1,
         });
-
-        dbg!(results);
 
         results.0.max(results.1)
     }
