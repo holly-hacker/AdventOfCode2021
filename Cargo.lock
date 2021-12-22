@@ -378,7 +378,15 @@ version = "0.1.0"
 dependencies = [
  "aoc-lib",
  "criterion",
- "either",
+]
+
+[[package]]
+name = "day-22"
+version = "0.1.0"
+dependencies = [
+ "aoc-lib",
+ "criterion",
+ "tinyvec",
 ]
 
 [[package]]

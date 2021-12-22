@@ -1,5 +1,5 @@
 [package]
-name = "day-21"
+name = "day-22"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
+tinyvec = { version = "1.5.1", features = ["rustc_1_55", "alloc"] }
 
 [dev-dependencies]
 criterion = "0.3"
