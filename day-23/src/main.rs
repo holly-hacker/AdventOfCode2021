@@ -21,13 +21,6 @@ pub struct Burrow<const N: usize> {
 const VALID_HALLWAY_INDICES: [usize; 7] = [0, 1, 3, 5, 7, 9, 10];
 
 impl<const N: usize> Burrow<N> {
-    pub fn new() -> Self {
-        Burrow {
-            side_rooms: [[None; N]; 4],
-            hallway: [None; 11],
-        }
-    }
-
     pub fn parse(input: &str) -> Self {
         let mut lines = input.lines();
         lines.next().unwrap();
@@ -80,29 +73,24 @@ impl<const N: usize> Burrow<N> {
         // 2. generate moves for all top items in the side rooms
         for (i, side_room) in self.side_rooms.iter().enumerate() {
             // find the first filled slot
-            for n in 0..N {
-                if side_room[n].is_some() {
-                    VALID_HALLWAY_INDICES
-                        .into_iter()
-                        .filter(|j| self.hallway[*j].is_none())
-                        .for_each(|j| {
-                            let from = Location::Sideroom(i, n);
-                            let to = Location::Hallway(j);
-                            let new_move = Move { to, from };
-                            new_move.is_valid(self).then(|| ret.push(new_move));
-                        });
-                    break;
-                }
+            if let Some((n, _)) = side_room.iter().enumerate().find(|(_, x)| x.is_some()) {
+                VALID_HALLWAY_INDICES
+                    .into_iter()
+                    .filter(|&j| self.hallway[j].is_none())
+                    .map(|j| {
+                        let from = Location::Sideroom(i, n);
+                        let to = Location::Hallway(j);
+                        Move { to, from }
+                    })
+                    .filter(|x| x.is_valid(self))
+                    .for_each(|new_move| ret.push(new_move));
             }
         }
-
-        // 3. sort by weight
-        // TODO: not sure if needed
-        // ret.sort_unstable_by(|a: &Move, b| a.cmp_with_burrow(*b, self));
 
         ret
     }
 
+    #[must_use]
     pub fn after_move(&self, the_move: Move) -> Self {
         let mut new_burrow = self.clone();
         new_burrow.do_move(the_move);
@@ -112,10 +100,11 @@ impl<const N: usize> Burrow<N> {
     fn do_move(&mut self, the_move: Move) {
         debug_assert!(the_move.is_valid(self), "move should be valid");
 
-        self[the_move.to] = self[the_move.from].clone();
+        self[the_move.to] = self[the_move.from];
         self[the_move.from] = None;
     }
 
+    #[must_use]
     pub fn before_move(&self, the_move: Move) -> Self {
         let mut new_burrow = self.clone();
         new_burrow.undo_move(the_move);
@@ -123,7 +112,7 @@ impl<const N: usize> Burrow<N> {
     }
 
     fn undo_move(&mut self, the_move: Move) {
-        self[the_move.from] = self[the_move.to].clone();
+        self[the_move.from] = self[the_move.to];
         self[the_move.to] = None;
     }
 
@@ -145,9 +134,11 @@ impl<const N: usize> Burrow<N> {
 
 impl Burrow<2> {
     pub fn extend(&self) -> Burrow<4> {
-        let mut ret = Burrow::<4>::new();
+        let mut ret = Burrow::<4> {
+            hallway: self.hallway,
+            ..Default::default()
+        };
 
-        ret.hallway = self.hallway.clone();
         ret.side_rooms[0] = [
             self.side_rooms[0][0],
             Some(Amphipod::Desert),
@@ -174,6 +165,15 @@ impl Burrow<2> {
         ];
 
         ret
+    }
+}
+
+impl<const N: usize> Default for Burrow<N> {
+    fn default() -> Self {
+        Burrow {
+            side_rooms: [[None; N]; 4],
+            hallway: [None; 11],
+        }
     }
 }
 
