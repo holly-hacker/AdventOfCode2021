@@ -390,6 +390,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "day-23"
+version = "0.1.0"
+dependencies = [
+ "aoc-lib",
+ "criterion",
+ "rustc-hash",
+ "tinyvec",
+]
+
+[[package]]
 name = "day-3"
 version = "0.1.0"
 dependencies = [
