@@ -46,26 +46,22 @@ impl Burrow {
         let mut ret = ArrayVec::default();
 
         // 1. generate moves for all items in the hallway
-        for (i, _) in self
-            .hallway
-            .iter()
-            .enumerate()
-            .filter(|(_, it)| it.is_some())
-        {
+        for i in VALID_HALLWAY_INDICES {
             let from = Location::Hallway(i);
-            for (j, side_room) in self.side_rooms.iter().enumerate() {
-                if side_room[1].is_none() {
-                    let to = Location::Sideroom(j, 1);
-                    let new_move = Move { to, from };
-                    new_move.is_valid(self).then(|| ret.push(new_move));
-                } else if side_room[0].is_none() {
-                    let to = Location::Sideroom(j, 0);
-                    let new_move = Move { to, from };
-                    new_move.is_valid(self).then(|| ret.push(new_move));
-                }
+            if self[from].is_none() {
+                continue;
             }
-
-            // TODO: also check all other hallway locations?
+            let j = self[from].unwrap().get_room_index();
+            let side_room = self.side_rooms[j];
+            if side_room[1].is_none() {
+                let to = Location::Sideroom(j, 1);
+                let new_move = Move { to, from };
+                new_move.is_valid(self).then(|| ret.push(new_move));
+            } else if side_room[0].is_none() {
+                let to = Location::Sideroom(j, 0);
+                let new_move = Move { to, from };
+                new_move.is_valid(self).then(|| ret.push(new_move));
+            }
         }
 
         // 2. generate moves for all top items in the side rooms
@@ -295,7 +291,7 @@ impl Amphipod {
         }
     }
 
-    pub fn to_char(me: Option<Self>) -> char {
+    pub const fn to_char(me: Option<Self>) -> char {
         match me {
             Some(Amphipod::Amber) => 'A',
             Some(Amphipod::Bronze) => 'B',
@@ -305,12 +301,21 @@ impl Amphipod {
         }
     }
 
-    pub fn weight(self) -> usize {
+    pub const fn weight(self) -> usize {
         match self {
             Amphipod::Amber => 1,
             Amphipod::Bronze => 10,
             Amphipod::Copper => 100,
             Amphipod::Desert => 1000,
+        }
+    }
+
+    pub const fn get_room_index(self) -> usize {
+        match self {
+            Amphipod::Amber => 0,
+            Amphipod::Bronze => 1,
+            Amphipod::Copper => 2,
+            Amphipod::Desert => 3,
         }
     }
 }
