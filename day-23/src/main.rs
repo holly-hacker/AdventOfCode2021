@@ -9,28 +9,35 @@ use aoc_lib::*;
 use rustc_hash::FxHashMap;
 use tinyvec::ArrayVec;
 
-aoc_setup!(Day23, sample 1: 12521, part 1: 11417);
+aoc_setup!(Day23, sample 1: 12521, sample 2: 44169, part 1: 11417, part 2: 49529);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Burrow {
-    side_rooms: [[Option<Amphipod>; 2]; 4],
-    // TODO: can remove 4 of these indices
+pub struct Burrow<const N: usize> {
+    side_rooms: [[Option<Amphipod>; N]; 4],
+    // NOTE: can remove 4 of these indices, but probably not very important
     hallway: [Option<Amphipod>; 11],
 }
 
 const VALID_HALLWAY_INDICES: [usize; 7] = [0, 1, 3, 5, 7, 9, 10];
 
-impl Burrow {
+impl<const N: usize> Burrow<N> {
+    pub fn new() -> Self {
+        Burrow {
+            side_rooms: [[None; N]; 4],
+            hallway: [None; 11],
+        }
+    }
+
     pub fn parse(input: &str) -> Self {
         let mut lines = input.lines();
         lines.next().unwrap();
         lines.next().unwrap();
         let mut burrow = Burrow {
-            side_rooms: [[None; 2]; 4],
+            side_rooms: [[None; N]; 4],
             hallway: [None; 11],
         };
 
-        for i in 0..2 {
+        for i in 0..N {
             let line = lines.next().unwrap().as_bytes();
             burrow.side_rooms[0][i] = Amphipod::parse(line[3] as char);
             burrow.side_rooms[1][i] = Amphipod::parse(line[5] as char);
@@ -41,8 +48,7 @@ impl Burrow {
         burrow
     }
 
-    // TODO: figure out correct max length, or change to TinyVec
-    pub fn generate_moves(&self) -> ArrayVec<[Move; 7 * 4]> {
+    pub fn generate_moves(&self) -> ArrayVec<[Move; (11 - 4) * 4]> {
         let mut ret = ArrayVec::default();
 
         // 1. generate moves for all items in the hallway
@@ -53,39 +59,40 @@ impl Burrow {
             }
             let j = self[from].unwrap().get_room_index();
             let side_room = self.side_rooms[j];
-            if side_room[1].is_none() {
-                let to = Location::Sideroom(j, 1);
-                let new_move = Move { to, from };
-                new_move.is_valid(self).then(|| ret.push(new_move));
-            } else if side_room[0].is_none() {
-                let to = Location::Sideroom(j, 0);
-                let new_move = Move { to, from };
-                new_move.is_valid(self).then(|| ret.push(new_move));
+
+            let can_move_to_location = side_room
+                .iter()
+                .all(|&x| x.is_none() || x.unwrap().get_room_index() == j);
+
+            if can_move_to_location {
+                // reverse loop because we want to find the deepest free point in this room (highest index)
+                for n in (0..N).rev() {
+                    if side_room[n].is_none() {
+                        let to = Location::Sideroom(j, n);
+                        let new_move = Move { to, from };
+                        new_move.is_valid(self).then(|| ret.push(new_move));
+                        break;
+                    }
+                }
             }
         }
 
         // 2. generate moves for all top items in the side rooms
         for (i, side_room) in self.side_rooms.iter().enumerate() {
-            if side_room[0].is_some() {
-                VALID_HALLWAY_INDICES
-                    .into_iter()
-                    .filter(|j| self.hallway[*j].is_none())
-                    .for_each(|j| {
-                        let from = Location::Sideroom(i, 0);
-                        let to = Location::Hallway(j);
-                        let new_move = Move { to, from };
-                        new_move.is_valid(self).then(|| ret.push(new_move));
-                    });
-            } else if side_room[1].is_some() {
-                VALID_HALLWAY_INDICES
-                    .into_iter()
-                    .filter(|j| self.hallway[*j].is_none())
-                    .for_each(|j| {
-                        let from = Location::Sideroom(i, 1);
-                        let to = Location::Hallway(j);
-                        let new_move = Move { to, from };
-                        new_move.is_valid(self).then(|| ret.push(new_move));
-                    });
+            // find the first filled slot
+            for n in 0..N {
+                if side_room[n].is_some() {
+                    VALID_HALLWAY_INDICES
+                        .into_iter()
+                        .filter(|j| self.hallway[*j].is_none())
+                        .for_each(|j| {
+                            let from = Location::Sideroom(i, n);
+                            let to = Location::Hallway(j);
+                            let new_move = Move { to, from };
+                            new_move.is_valid(self).then(|| ret.push(new_move));
+                        });
+                    break;
+                }
             }
         }
 
@@ -121,17 +128,56 @@ impl Burrow {
     }
 
     pub fn is_solved(&self) -> bool {
-        self.side_rooms
-            == [
-                [Some(Amphipod::Amber), Some(Amphipod::Amber)],
-                [Some(Amphipod::Bronze), Some(Amphipod::Bronze)],
-                [Some(Amphipod::Copper), Some(Amphipod::Copper)],
-                [Some(Amphipod::Desert), Some(Amphipod::Desert)],
-            ]
+        self.side_rooms[0]
+            .iter()
+            .all(|&x| x == Some(Amphipod::Amber))
+            && self.side_rooms[1]
+                .iter()
+                .all(|&x| x == Some(Amphipod::Bronze))
+            && self.side_rooms[2]
+                .iter()
+                .all(|&x| x == Some(Amphipod::Copper))
+            && self.side_rooms[3]
+                .iter()
+                .all(|&x| x == Some(Amphipod::Desert))
     }
 }
 
-impl Display for Burrow {
+impl Burrow<2> {
+    pub fn extend(&self) -> Burrow<4> {
+        let mut ret = Burrow::<4>::new();
+
+        ret.hallway = self.hallway.clone();
+        ret.side_rooms[0] = [
+            self.side_rooms[0][0],
+            Some(Amphipod::Desert),
+            Some(Amphipod::Desert),
+            self.side_rooms[0][1],
+        ];
+        ret.side_rooms[1] = [
+            self.side_rooms[1][0],
+            Some(Amphipod::Copper),
+            Some(Amphipod::Bronze),
+            self.side_rooms[1][1],
+        ];
+        ret.side_rooms[2] = [
+            self.side_rooms[2][0],
+            Some(Amphipod::Bronze),
+            Some(Amphipod::Amber),
+            self.side_rooms[2][1],
+        ];
+        ret.side_rooms[3] = [
+            self.side_rooms[3][0],
+            Some(Amphipod::Amber),
+            Some(Amphipod::Copper),
+            self.side_rooms[3][1],
+        ];
+
+        ret
+    }
+}
+
+impl<const N: usize> Display for Burrow<N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "#############")?;
 
@@ -141,7 +187,7 @@ impl Display for Burrow {
         }
         writeln!(f, "#")?;
 
-        for y in 0..2 {
+        for y in 0..N {
             write!(f, "{}", if y == 0 { "##" } else { "  " })?;
             for x in 0..4 {
                 write!(f, "#")?;
@@ -156,7 +202,7 @@ impl Display for Burrow {
     }
 }
 
-impl Index<Location> for Burrow {
+impl<const N: usize> Index<Location> for Burrow<N> {
     type Output = Option<Amphipod>;
 
     fn index(&self, index: Location) -> &Self::Output {
@@ -167,7 +213,7 @@ impl Index<Location> for Burrow {
     }
 }
 
-impl IndexMut<Location> for Burrow {
+impl<const N: usize> IndexMut<Location> for Burrow<N> {
     fn index_mut(&mut self, index: Location) -> &mut Self::Output {
         match index {
             Location::Hallway(idx) => &mut self.hallway[idx],
@@ -183,7 +229,7 @@ pub struct Move {
 }
 
 impl Move {
-    pub fn cost(self, burrow: &Burrow) -> usize {
+    pub fn cost<const N: usize>(self, burrow: &Burrow<N>) -> usize {
         // println!("calculating cost for {:?}", self);
         debug_assert!(burrow[self.from].is_some());
         debug_assert_eq!(None, burrow[self.to]);
@@ -196,9 +242,8 @@ impl Move {
 
     fn manhattan_distance(self) -> usize {
         debug_assert!(
-            (matches!(self.from, Location::Sideroom(_, _)) as u8
-                + matches!(self.to, Location::Sideroom(_, _)) as u8)
-                != 2,
+            (!(matches!(self.from, Location::Sideroom(_, _))
+                && matches!(self.to, Location::Sideroom(_, _)))),
             "cannot calculate manhattan distance between 2 siderooms yet"
         );
         let ((x1, y1), (x2, y2)) = (self.from.coordinate(), self.to.coordinate());
@@ -207,7 +252,7 @@ impl Move {
         dx + dy
     }
 
-    pub fn is_valid(self, burrow: &Burrow) -> bool {
+    pub fn is_valid<const N: usize>(self, burrow: &Burrow<N>) -> bool {
         let ((x1, y1), (x2, y2)) = (self.from.coordinate(), self.to.coordinate());
 
         // if move through hallway, check that we're not crossing existing amphipods
@@ -228,16 +273,21 @@ impl Move {
             }
         }
 
-        if let Location::Sideroom(x, y) = self.from {
-            if y > 0 && burrow.side_rooms[x][0].is_some() {
-                // println!("sideroom from blocked: {:?}", burrow.side_rooms[x]);
+        // ensure that we're not crossing amphipods in the hallway
+        if let Location::Sideroom(x, depth) = self.from {
+            // excludes self
+            if (0..depth)
+                .map(|i| burrow.side_rooms[x][i])
+                .any(|it| it.is_some())
+            {
                 return false;
             }
         }
-
-        if let Location::Sideroom(x, y) = self.to {
-            if y > 0 && burrow.side_rooms[x][0].is_some() {
-                // println!("sideroom to blocked: {:?}", burrow.side_rooms[x]);
+        if let Location::Sideroom(x, depth) = self.to {
+            if (0..=depth)
+                .map(|i| burrow.side_rooms[x][i])
+                .any(|it| it.is_some())
+            {
                 return false;
             }
         }
@@ -245,7 +295,7 @@ impl Move {
         true
     }
 
-    pub fn cmp_with_burrow(self, other: Self, burrow: &Burrow) -> Ordering {
+    pub fn cmp_with_burrow<const N: usize>(self, other: Self, burrow: &Burrow<N>) -> Ordering {
         Ord::cmp(&self.cost(burrow), &other.cost(burrow))
     }
 }
@@ -267,7 +317,7 @@ impl Location {
 
 impl Default for Location {
     fn default() -> Self {
-        Location::Hallway(99)
+        Location::Hallway(usize::MAX)
     }
 }
 
@@ -323,7 +373,7 @@ impl Amphipod {
 pub struct Day23;
 
 impl AdventOfCode for Day23 {
-    type Input = Burrow;
+    type Input = Burrow<2>;
     type Output = usize;
 
     fn parse_input(s: &str) -> Self::Input {
@@ -334,33 +384,33 @@ impl AdventOfCode for Day23 {
         dijkstra(input)
     }
 
-    fn solve_2(_input: &Self::Input) -> Self::Output {
-        0
+    fn solve_2(input: &Self::Input) -> Self::Output {
+        dijkstra(&input.extend())
     }
 }
 
 #[derive(PartialEq, Eq)]
-struct State {
-    burrow: Burrow,
+struct State<const N: usize> {
+    burrow: Burrow<N>,
     cost: usize,
 }
 
-impl PartialOrd for State {
+impl<const N: usize> PartialOrd for State<N> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         other.cost.partial_cmp(&self.cost)
     }
 }
 
-impl Ord for State {
+impl<const N: usize> Ord for State<N> {
     fn cmp(&self, other: &Self) -> Ordering {
         other.cost.cmp(&self.cost)
     }
 }
 
 // TODO: could try a*
-fn dijkstra(input: &Burrow) -> usize {
+fn dijkstra<const N: usize>(input: &Burrow<N>) -> usize {
     // let mut dist = vec![(usize::MAX, None); input.data.len()];
-    let mut dist: FxHashMap<Burrow, (usize, Option<Move>)> = FxHashMap::default();
+    let mut dist: FxHashMap<Burrow<N>, (usize, Option<Move>)> = FxHashMap::default();
     let mut heap = BinaryHeap::new();
 
     dist.insert(input.clone(), (0, None));
@@ -377,15 +427,15 @@ fn dijkstra(input: &Burrow) -> usize {
             let mut path = Vec::new();
             let mut last_move = dist[&burrow].1;
             path.push(last_move.unwrap());
-            println!("{}", editable_burrow);
+            // println!("{}", editable_burrow);
             while let Some(prev) = last_move {
                 path.push(prev);
                 editable_burrow.undo_move(prev);
-                println!("{}", editable_burrow);
+                // println!("{}", editable_burrow);
                 last_move = dist[&editable_burrow].1;
             }
             path.reverse();
-            dbg!(path);
+            // dbg!(path);
             return cost;
         }
 
